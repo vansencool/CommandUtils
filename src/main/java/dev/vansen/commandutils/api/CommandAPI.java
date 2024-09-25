@@ -31,7 +31,6 @@ public class CommandAPI {
      * Sets the {@link LifecycleEventManager} instance to be used for handling lifecycle events.
      *
      * @param event the {@link LifecycleEventManager} instance to set.
-     * @throws NullPointerException if the provided {@link LifecycleEventManager} is {@code null}.
      */
     public static void set(@NotNull LifecycleEventManager<Plugin> event) {
         CommandAPI.event = event;

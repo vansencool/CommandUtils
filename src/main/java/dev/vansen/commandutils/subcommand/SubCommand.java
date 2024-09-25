@@ -20,7 +20,6 @@ import org.jetbrains.annotations.NotNull;
 public class SubCommand {
 
     private final LiteralArgumentBuilder<CommandSourceStack> builder;
-    private RequiredArgumentBuilder<CommandSourceStack, ?> currentArgument;
 
     /**
      * Constructs a new subcommand with the specified name.
@@ -89,26 +88,39 @@ public class SubCommand {
             }
         });
         builder.then(arg);
-        currentArgument = arg;
         return this;
     }
 
     /**
-     * Adds a completion handler for an argument in the subcommand.
-     * Enables tab completion for the last .argument() added to the subcommand.
+     * Adds an argument to the subcommand.
+     * Specifies the argument's type and the executor that handles it.
      *
-     * @param <T>     the type of the argument.
-     * @param handler the {@link CompletionHandler} that provides completion suggestions.
+     * @param <T>      the type of the argument.
+     * @param name     the name of the argument.
+     * @param type     the {@link ArgumentType} of the argument.
+     * @param executor the {@link CommandExecutor} to be executed when the argument is provided.
+     * @param handler  the {@link CompletionHandler} completion handler for the argument.
      * @return this {@link SubCommand} instance for chaining.
      */
     @NotNull
     @CanIgnoreReturnValue
-    public <T> SubCommand completion(@NotNull String name, @NotNull ArgumentType<T> type, @NotNull CompletionHandler handler) {
-        currentArgument.suggests((context, builder) -> {
+    public <T> SubCommand argument(@NotNull String name, @NotNull ArgumentType<T> type, @NotNull CommandExecutor executor, CompletionHandler handler) {
+        RequiredArgumentBuilder<CommandSourceStack, T> arg = RequiredArgumentBuilder.argument(name, type);
+        arg.executes(context -> {
+            CommandWrapper wrapped = new CommandWrapper(context);
+            try {
+                executor.execute(wrapped);
+                return 1;
+            } catch (CmdException e) {
+                e.send();
+                return 0;
+            }
+        }).suggests((context, builder) -> {
             CommandWrapper wrapped = new CommandWrapper(context);
             SuggestionsBuilderWrapper wrapper = new SuggestionsBuilderWrapper(builder);
             return handler.complete(wrapped, wrapper);
         });
+        builder.then(arg);
         return this;
     }
 

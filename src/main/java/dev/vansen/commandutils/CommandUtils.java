@@ -35,7 +35,6 @@ import java.util.function.Consumer;
 public class CommandUtils {
 
     private final LiteralArgumentBuilder<CommandSourceStack> builder;
-    private RequiredArgumentBuilder<CommandSourceStack, ?> currentArgument;
     @Nullable
     private String description = null;
     @Nullable
@@ -105,26 +104,39 @@ public class CommandUtils {
             }
         });
         builder.then(arg);
-        currentArgument = arg;
         return this;
     }
 
     /**
-     * Adds a completion handler for an argument.
-     * This enables tab-completion support for the argument based on the current .argument() call.
+     * Adds an argument to the command.
+     * This method allows for specifying the type of argument and its executor.
      *
-     * @param <T>     the type of the argument.
-     * @param handler the {@link CompletionHandler} responsible for providing suggestions.
+     * @param <T>      the type of the argument.
+     * @param name     the name of the argument.
+     * @param type     the {@link ArgumentType} of the argument.
+     * @param executor the {@link CommandExecutor} to be executed when the argument is provided.
+     * @param handler  the {@link CompletionHandler} completion handler for the argument.
      * @return this {@link CommandUtils} instance for chaining.
      */
     @NotNull
     @CanIgnoreReturnValue
-    public <T> CommandUtils completion(@NotNull CompletionHandler handler) {
-        currentArgument.suggests((context, builder) -> {
+    public <T> CommandUtils argument(@NotNull String name, @NotNull ArgumentType<T> type, @NotNull CommandExecutor executor, CompletionHandler handler) {
+        RequiredArgumentBuilder<CommandSourceStack, T> arg = RequiredArgumentBuilder.argument(name, type);
+        arg.executes(context -> {
+            CommandWrapper wrapped = new CommandWrapper(context);
+            try {
+                executor.execute(wrapped);
+                return 1;
+            } catch (CmdException e) {
+                e.send();
+                return 0;
+            }
+        }).suggests((context, builder) -> {
             CommandWrapper wrapped = new CommandWrapper(context);
             SuggestionsBuilderWrapper wrapper = new SuggestionsBuilderWrapper(builder);
             return handler.complete(wrapped, wrapper);
         });
+        builder.then(arg);
         return this;
     }
 
