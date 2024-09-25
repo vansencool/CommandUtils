@@ -35,6 +35,7 @@ import java.util.function.Consumer;
 public class CommandUtils {
 
     private final LiteralArgumentBuilder<CommandSourceStack> builder;
+    private RequiredArgumentBuilder<CommandSourceStack, ?> currentArgument;
     @Nullable
     private String description = null;
     @Nullable
@@ -104,29 +105,26 @@ public class CommandUtils {
             }
         });
         builder.then(arg);
+        currentArgument = arg;
         return this;
     }
 
     /**
-     * Adds a completion handler for a specific argument.
-     * This enables tab-completion support for the argument based on the provided handler.
+     * Adds a completion handler for an argument.
+     * This enables tab-completion support for the argument based on the current .argument() call.
      *
      * @param <T>     the type of the argument.
-     * @param name    the name of the argument.
-     * @param type    the {@link ArgumentType} of the argument.
      * @param handler the {@link CompletionHandler} responsible for providing suggestions.
      * @return this {@link CommandUtils} instance for chaining.
      */
     @NotNull
     @CanIgnoreReturnValue
-    public <T> CommandUtils completion(@NotNull String name, @NotNull ArgumentType<T> type, @NotNull CompletionHandler handler) {
-        RequiredArgumentBuilder<CommandSourceStack, T> arg = RequiredArgumentBuilder.argument(name, type);
-        arg.suggests((context, builder) -> {
+    public <T> CommandUtils completion(@NotNull CompletionHandler handler) {
+        currentArgument.suggests((context, builder) -> {
             CommandWrapper wrapped = new CommandWrapper(context);
             SuggestionsBuilderWrapper wrapper = new SuggestionsBuilderWrapper(builder);
             return handler.complete(wrapped, wrapper);
         });
-        builder.then(arg);
         return this;
     }
 

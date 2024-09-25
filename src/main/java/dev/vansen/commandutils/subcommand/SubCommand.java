@@ -20,6 +20,7 @@ import org.jetbrains.annotations.NotNull;
 public class SubCommand {
 
     private final LiteralArgumentBuilder<CommandSourceStack> builder;
+    private RequiredArgumentBuilder<CommandSourceStack, ?> currentArgument;
 
     /**
      * Constructs a new subcommand with the specified name.
@@ -51,7 +52,6 @@ public class SubCommand {
     @NotNull
     @CanIgnoreReturnValue
     public SubCommand execution(@NotNull CommandExecutor executor) {
-
         builder.executes(context -> {
             try {
                 CommandWrapper wrapped = new CommandWrapper(context);
@@ -61,7 +61,6 @@ public class SubCommand {
             }
             return 1;
         });
-
         return this;
     }
 
@@ -90,29 +89,26 @@ public class SubCommand {
             }
         });
         builder.then(arg);
+        currentArgument = arg;
         return this;
     }
 
     /**
      * Adds a completion handler for an argument in the subcommand.
-     * Enables tab completion for the argument using the provided handler.
+     * Enables tab completion for the last .argument() added to the subcommand.
      *
      * @param <T>     the type of the argument.
-     * @param name    the name of the argument.
-     * @param type    the {@link ArgumentType} of the argument.
      * @param handler the {@link CompletionHandler} that provides completion suggestions.
      * @return this {@link SubCommand} instance for chaining.
      */
     @NotNull
     @CanIgnoreReturnValue
     public <T> SubCommand completion(@NotNull String name, @NotNull ArgumentType<T> type, @NotNull CompletionHandler handler) {
-        RequiredArgumentBuilder<CommandSourceStack, T> arg = RequiredArgumentBuilder.argument(name, type);
-        arg.suggests((context, builder) -> {
+        currentArgument.suggests((context, builder) -> {
             CommandWrapper wrapped = new CommandWrapper(context);
             SuggestionsBuilderWrapper wrapper = new SuggestionsBuilderWrapper(builder);
             return handler.complete(wrapped, wrapper);
         });
-        builder.then(arg);
         return this;
     }
 
