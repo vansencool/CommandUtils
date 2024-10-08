@@ -13,7 +13,7 @@ repositories {
 
 ```groovy
 dependencies {
-    implementation 'com.github.vansencool:CommandUtils:1.0.0'
+    implementation 'com.github.vansencool:CommandUtils:1.0.5'
 }
 ```
 
@@ -30,6 +30,9 @@ dependencies {
 <dependency>
     <groupId>com.github.vansencool</groupId>
     <artifactId>CommandUtils</artifactId>
-    <version>1.0.0</version>
+    <version>1.0.5</version>
 </dependency>
 ```
+
+# How to use it?
+You can visit https://vansen.gitbook.io/commandutils/ on how to use it!
