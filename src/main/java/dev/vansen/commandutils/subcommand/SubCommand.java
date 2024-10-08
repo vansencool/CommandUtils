@@ -48,6 +48,28 @@ public class SubCommand {
     }
 
     /**
+     * Sets the execution logic for the subcommand.
+     * This method defines what happens when the subcommand is executed.
+     *
+     * @param executor the {@link CommandExecutor} that handles execution.
+     * @return this {@link SubCommand} instance for chaining.
+     */
+    @NotNull
+    @CanIgnoreReturnValue
+    public SubCommand execution(@NotNull CommandExecutor executor) {
+        builder.executes(context -> {
+            try {
+                CommandWrapper wrapped = new CommandWrapper(context);
+                executor.execute(wrapped);
+            } catch (CmdException e) {
+                e.send();
+            }
+            return 1;
+        });
+        return this;
+    }
+
+    /**
      * Adds an argument to the subcommand.
      * This method allows required arguments to be added to the command.
      *
