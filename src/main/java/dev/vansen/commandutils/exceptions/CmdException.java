@@ -5,7 +5,7 @@ import org.bukkit.command.CommandSender;
 import org.jetbrains.annotations.NotNull;
 
 /**
- * Represents an exception that occurs during command execution in a Minecraft plugin.
+ * Represents an exception that occurs during command execution.
  * This class extends {@link CommandException} and is used to send a custom error message
  * to a {@link CommandSender}.
  */

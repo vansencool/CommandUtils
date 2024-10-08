@@ -1,9 +1,10 @@
 package dev.vansen.commandutils.subcommand;
 
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
-import com.mojang.brigadier.arguments.ArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.builder.RequiredArgumentBuilder;
+import dev.vansen.commandutils.argument.Argument;
+import dev.vansen.commandutils.argument.ArgumentNester;
 import dev.vansen.commandutils.command.CommandExecutor;
 import dev.vansen.commandutils.command.CommandWrapper;
 import dev.vansen.commandutils.completer.CompletionHandler;
@@ -11,6 +12,9 @@ import dev.vansen.commandutils.completer.SuggestionsBuilderWrapper;
 import dev.vansen.commandutils.exceptions.CmdException;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 import org.jetbrains.annotations.NotNull;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Represents a subcommand in the command system.
@@ -20,6 +24,7 @@ import org.jetbrains.annotations.NotNull;
 public class SubCommand {
 
     private final LiteralArgumentBuilder<CommandSourceStack> builder;
+    private final List<RequiredArgumentBuilder<CommandSourceStack, ?>> argumentStack = new ArrayList<>();
 
     /**
      * Constructs a new subcommand with the specified name.
@@ -42,44 +47,37 @@ public class SubCommand {
     }
 
     /**
-     * Sets the execution logic for the subcommand.
-     * This method defines what happens when the subcommand is executed.
+     * Adds an argument to the subcommand.
+     * This method allows required arguments to be added to the command.
      *
-     * @param executor the {@link CommandExecutor} that handles execution.
+     * @param <T>      the type of the argument.
+     * @param argument the {@link Argument}
      * @return this {@link SubCommand} instance for chaining.
      */
     @NotNull
     @CanIgnoreReturnValue
-    public SubCommand execution(@NotNull CommandExecutor executor) {
-        builder.executes(context -> {
-            try {
-                CommandWrapper wrapped = new CommandWrapper(context);
-                executor.execute(wrapped);
-            } catch (CmdException e) {
-                e.send();
-            }
-            return 1;
-        });
+    public <T> SubCommand argument(@NotNull Argument<T> argument) {
+        RequiredArgumentBuilder<CommandSourceStack, T> arg = RequiredArgumentBuilder.argument(argument.name(), argument.type());
+        argumentStack.add(arg);
         return this;
     }
 
     /**
      * Adds an argument to the subcommand.
-     * Specifies the argument's type and the executor that handles it.
+     * This method allows for specifying the type of argument and its executor.
      *
      * @param <T>      the type of the argument.
-     * @param name     the name of the argument.
-     * @param type     the {@link ArgumentType} of the argument.
+     * @param argument the {@link Argument}
      * @param executor the {@link CommandExecutor} to be executed when the argument is provided.
      * @return this {@link SubCommand} instance for chaining.
      */
     @NotNull
     @CanIgnoreReturnValue
-    public <T> SubCommand argument(@NotNull String name, @NotNull ArgumentType<T> type, @NotNull CommandExecutor executor) {
-        RequiredArgumentBuilder<CommandSourceStack, T> arg = RequiredArgumentBuilder.argument(name, type);
+    public <T> SubCommand argument(@NotNull Argument<T> argument, @NotNull CommandExecutor executor) {
+        RequiredArgumentBuilder<CommandSourceStack, T> arg = RequiredArgumentBuilder.argument(argument.name(), argument.type());
         arg.executes(context -> {
+            CommandWrapper wrapped = new CommandWrapper(context);
             try {
-                CommandWrapper wrapped = new CommandWrapper(context);
                 executor.execute(wrapped);
                 return 1;
             } catch (CmdException e) {
@@ -87,25 +85,24 @@ public class SubCommand {
                 return 0;
             }
         });
-        builder.then(arg);
+        argumentStack.add(arg);
         return this;
     }
 
     /**
      * Adds an argument to the subcommand.
-     * Specifies the argument's type and the executor that handles it.
+     * This method allows for specifying the type of argument and its executor and the completion handler.
      *
      * @param <T>      the type of the argument.
-     * @param name     the name of the argument.
-     * @param type     the {@link ArgumentType} of the argument.
+     * @param argument the {@link Argument}
      * @param executor the {@link CommandExecutor} to be executed when the argument is provided.
      * @param handler  the {@link CompletionHandler} completion handler for the argument.
      * @return this {@link SubCommand} instance for chaining.
      */
     @NotNull
     @CanIgnoreReturnValue
-    public <T> SubCommand argument(@NotNull String name, @NotNull ArgumentType<T> type, @NotNull CommandExecutor executor, CompletionHandler handler) {
-        RequiredArgumentBuilder<CommandSourceStack, T> arg = RequiredArgumentBuilder.argument(name, type);
+    public <T> SubCommand argument(@NotNull Argument<T> argument, @NotNull CommandExecutor executor, CompletionHandler handler) {
+        RequiredArgumentBuilder<CommandSourceStack, T> arg = RequiredArgumentBuilder.argument(argument.name(), argument.type());
         arg.executes(context -> {
             CommandWrapper wrapped = new CommandWrapper(context);
             try {
@@ -120,7 +117,7 @@ public class SubCommand {
             SuggestionsBuilderWrapper wrapper = new SuggestionsBuilderWrapper(builder);
             return handler.complete(wrapped, wrapper);
         });
-        builder.then(arg);
+        argumentStack.add(arg);
         return this;
     }
 
@@ -131,6 +128,7 @@ public class SubCommand {
      */
     @NotNull
     public LiteralArgumentBuilder<CommandSourceStack> get() {
+        ArgumentNester.nest(argumentStack, builder);
         return builder;
     }
 }

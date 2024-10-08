@@ -1,10 +1,12 @@
 package dev.vansen.commandutils;
 
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
-import com.mojang.brigadier.arguments.ArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import dev.vansen.commandutils.api.CommandAPI;
+import dev.vansen.commandutils.argument.Argument;
+import dev.vansen.commandutils.argument.ArgumentNester;
+import dev.vansen.commandutils.argument.ArgumentPosition;
 import dev.vansen.commandutils.command.CommandExecutor;
 import dev.vansen.commandutils.command.CommandWrapper;
 import dev.vansen.commandutils.completer.CompletionHandler;
@@ -23,6 +25,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
 
@@ -35,6 +38,7 @@ import java.util.function.Consumer;
 public class CommandUtils {
 
     private final LiteralArgumentBuilder<CommandSourceStack> builder;
+    private final List<RequiredArgumentBuilder<CommandSourceStack, ?>> argumentStack = new ArrayList<>();
     @Nullable
     private String description = null;
     @Nullable
@@ -67,15 +71,32 @@ public class CommandUtils {
     @NotNull
     @CanIgnoreReturnValue
     public CommandUtils defaultExecute(@NotNull CommandExecutor executor) {
-        try {
-            builder.executes(context -> {
-                CommandWrapper wrapped = new CommandWrapper(context);
+        builder.executes(context -> {
+            CommandWrapper wrapped = new CommandWrapper(context);
+            try {
                 executor.execute(wrapped);
                 return 1;
-            });
-        } catch (CmdException e) {
-            e.send();
-        }
+            } catch (CmdException e) {
+                e.send();
+                return 0;
+            }
+        });
+        return this;
+    }
+
+    /**
+     * Adds an argument to the command.
+     * This method allows required arguments to be added to the command.
+     *
+     * @param <T>      the type of the argument.
+     * @param argument the {@link Argument}
+     * @return this {@link CommandUtils} instance for chaining.
+     */
+    @NotNull
+    @CanIgnoreReturnValue
+    public <T> CommandUtils argument(@NotNull Argument<T> argument) {
+        RequiredArgumentBuilder<CommandSourceStack, T> arg = RequiredArgumentBuilder.argument(argument.name(), argument.type());
+        argumentStack.add(arg);
         return this;
     }
 
@@ -84,15 +105,14 @@ public class CommandUtils {
      * This method allows for specifying the type of argument and its executor.
      *
      * @param <T>      the type of the argument.
-     * @param name     the name of the argument.
-     * @param type     the {@link ArgumentType} of the argument.
+     * @param argument the {@link Argument}
      * @param executor the {@link CommandExecutor} to be executed when the argument is provided.
      * @return this {@link CommandUtils} instance for chaining.
      */
     @NotNull
     @CanIgnoreReturnValue
-    public <T> CommandUtils argument(@NotNull String name, @NotNull ArgumentType<T> type, @NotNull CommandExecutor executor) {
-        RequiredArgumentBuilder<CommandSourceStack, T> arg = RequiredArgumentBuilder.argument(name, type);
+    public <T> CommandUtils argument(@NotNull Argument<T> argument, @NotNull CommandExecutor executor) {
+        RequiredArgumentBuilder<CommandSourceStack, T> arg = RequiredArgumentBuilder.argument(argument.name(), argument.type());
         arg.executes(context -> {
             CommandWrapper wrapped = new CommandWrapper(context);
             try {
@@ -103,25 +123,24 @@ public class CommandUtils {
                 return 0;
             }
         });
-        builder.then(arg);
+        argumentStack.add(arg);
         return this;
     }
 
     /**
      * Adds an argument to the command.
-     * This method allows for specifying the type of argument and its executor.
+     * This method allows for specifying the type of argument and its executor and the completion handler.
      *
      * @param <T>      the type of the argument.
-     * @param name     the name of the argument.
-     * @param type     the {@link ArgumentType} of the argument.
+     * @param argument the {@link Argument}
      * @param executor the {@link CommandExecutor} to be executed when the argument is provided.
      * @param handler  the {@link CompletionHandler} completion handler for the argument.
      * @return this {@link CommandUtils} instance for chaining.
      */
     @NotNull
     @CanIgnoreReturnValue
-    public <T> CommandUtils argument(@NotNull String name, @NotNull ArgumentType<T> type, @NotNull CommandExecutor executor, CompletionHandler handler) {
-        RequiredArgumentBuilder<CommandSourceStack, T> arg = RequiredArgumentBuilder.argument(name, type);
+    public <T> CommandUtils argument(@NotNull Argument<T> argument, @NotNull CommandExecutor executor, CompletionHandler handler) {
+        RequiredArgumentBuilder<CommandSourceStack, T> arg = RequiredArgumentBuilder.argument(argument.name(), argument.type());
         arg.executes(context -> {
             CommandWrapper wrapped = new CommandWrapper(context);
             try {
@@ -136,7 +155,92 @@ public class CommandUtils {
             SuggestionsBuilderWrapper wrapper = new SuggestionsBuilderWrapper(builder);
             return handler.complete(wrapped, wrapper);
         });
-        builder.then(arg);
+        argumentStack.add(arg);
+        return this;
+    }
+
+    /**
+     * Adds an argument to the command with a completion handler;
+     * This method allows for specifying the type of argument and its completion handler without having to specify the executor.
+     *
+     * @param <T>      the type of the argument.
+     * @param argument the {@link Argument}
+     * @param handler  the {@link CompletionHandler} completion handler for the argument.
+     * @return this {@link CommandUtils} instance for chaining.
+     */
+    @NotNull
+    @CanIgnoreReturnValue
+    public <T> CommandUtils argument(@NotNull Argument<T> argument, @NotNull CompletionHandler handler) {
+        RequiredArgumentBuilder<CommandSourceStack, T> arg = RequiredArgumentBuilder.argument(argument.name(), argument.type());
+        arg.suggests((context, builder) -> {
+            CommandWrapper wrapped = new CommandWrapper(context);
+            SuggestionsBuilderWrapper wrapper = new SuggestionsBuilderWrapper(builder);
+            return handler.complete(wrapped, wrapper);
+        });
+        argumentStack.add(arg);
+        return this;
+    }
+
+    /**
+     * Adds a completion handler to the last argument added to the command.
+     *
+     * @param handler the {@link CompletionHandler} completion handler for the argument.
+     * @return this {@link CommandUtils} instance for chaining.
+     */
+    @NotNull
+    @CanIgnoreReturnValue
+    public CommandUtils completion(@NotNull CompletionHandler handler) {
+        argumentStack.getLast()
+                .suggests((context, builder) -> {
+                    CommandWrapper wrapped = new CommandWrapper(context);
+                    SuggestionsBuilderWrapper wrapper = new SuggestionsBuilderWrapper(builder);
+                    return handler.complete(wrapped, wrapper);
+                });
+        return this;
+    }
+
+    /**
+     * Adds a completion handler to the first or last argument added to the command.
+     *
+     * @param handler the {@link CompletionHandler} completion handler for the argument.
+     * @return this {@link CommandUtils} instance for chaining.
+     */
+    @NotNull
+    @CanIgnoreReturnValue
+    public CommandUtils completion(@NotNull ArgumentPosition position, @NotNull CompletionHandler handler) {
+        switch (position) {
+            case ArgumentPosition.FIRST -> argumentStack.getFirst()
+                    .suggests((context, builder) -> {
+                        CommandWrapper wrapped = new CommandWrapper(context);
+                        SuggestionsBuilderWrapper wrapper = new SuggestionsBuilderWrapper(builder);
+                        return handler.complete(wrapped, wrapper);
+                    });
+            case ArgumentPosition.LAST -> argumentStack.getLast()
+                    .suggests((context, builder) -> {
+                        CommandWrapper wrapped = new CommandWrapper(context);
+                        SuggestionsBuilderWrapper wrapper = new SuggestionsBuilderWrapper(builder);
+                        return handler.complete(wrapped, wrapper);
+                    });
+        }
+        return this;
+    }
+
+    /**
+     * Adds a completion handler to the argument at the specified index.
+     *
+     * @param index   the index of the argument to add the completion handler to.
+     * @param handler the {@link CompletionHandler} completion handler for the argument.
+     * @return this {@link CommandUtils} instance for chaining.
+     */
+    @NotNull
+    @CanIgnoreReturnValue
+    public CommandUtils completion(int index, @NotNull CompletionHandler handler) {
+        argumentStack.get(index)
+                .suggests((context, builder) -> {
+                    CommandWrapper wrapped = new CommandWrapper(context);
+                    SuggestionsBuilderWrapper wrapper = new SuggestionsBuilderWrapper(builder);
+                    return handler.complete(wrapped, wrapper);
+                });
         return this;
     }
 
@@ -184,6 +288,7 @@ public class CommandUtils {
     public void build() {
         CommandAPI.get().registerEventHandler(LifecycleEvents.COMMANDS, event -> {
             final Commands commands = event.registrar();
+            ArgumentNester.nest(argumentStack, builder);
             commands.register(builder.build(), description, aliases == null ? List.of() : aliases);
         });
     }
@@ -195,6 +300,7 @@ public class CommandUtils {
     public void build(@NotNull LifecycleEventManager<Plugin> plugin) {
         plugin.registerEventHandler(LifecycleEvents.COMMANDS, event -> {
             final Commands commands = event.registrar();
+            ArgumentNester.nest(argumentStack, builder);
             commands.register(builder.build(), description, aliases == null ? List.of() : aliases);
         });
     }
@@ -206,6 +312,7 @@ public class CommandUtils {
     public void build(@NotNull JavaPlugin plugin) {
         plugin.getLifecycleManager().registerEventHandler(LifecycleEvents.COMMANDS, event -> {
             final Commands commands = event.registrar();
+            ArgumentNester.nest(argumentStack, builder);
             commands.register(builder.build(), description, aliases == null ? List.of() : aliases);
         });
     }
@@ -217,6 +324,7 @@ public class CommandUtils {
     public void build(@NotNull PluginMeta meta) {
         CommandAPI.get().registerEventHandler(LifecycleEvents.COMMANDS, event -> {
             final Commands commands = event.registrar();
+            ArgumentNester.nest(argumentStack, builder);
             commands.register(meta, builder.build(), description, aliases == null ? List.of() : aliases);
         });
     }
@@ -234,6 +342,7 @@ public class CommandUtils {
     public void build(@NotNull String namespace) {
         CommandAPI.get().registerEventHandler(LifecycleEvents.COMMANDS, event -> {
             final Commands commands = event.registrar();
+            ArgumentNester.nest(argumentStack, builder);
             commands.getDispatcher().register(builder);
             commands.getDispatcher().register(LiteralArgumentBuilder
                     .<CommandSourceStack>literal(namespace + ":" + builder.getLiteral())
