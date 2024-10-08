@@ -1,6 +1,8 @@
 package dev.vansen.commandutils.completer;
 
 import com.mojang.brigadier.Message;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -24,6 +26,10 @@ public class Tooltiper implements Message {
         this.tooltip = tooltip;
     }
 
+    public Tooltiper(@NotNull Component tooltip) {
+        this(PlainTextComponentSerializer.plainText().serialize(tooltip));
+    }
+
     /**
      * Returns the tooltip text as a string.
      *
@@ -41,6 +47,16 @@ public class Tooltiper implements Message {
      * @return a new {@link Tooltiper} instance with the given tooltip text.
      */
     public static @NotNull Tooltiper of(@NotNull String tooltip) {
+        return new Tooltiper(tooltip);
+    }
+
+    /**
+     * Creates a new {@link Tooltiper} instance with the specified tooltip text.
+     *
+     * @param tooltip the text to be used as the tooltip. This should not be null.
+     * @return a new {@link Tooltiper} instance with the given tooltip text.
+     */
+    public static @NotNull Tooltiper of(@NotNull Component tooltip) {
         return new Tooltiper(tooltip);
     }
 }

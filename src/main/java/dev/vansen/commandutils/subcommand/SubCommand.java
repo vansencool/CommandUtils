@@ -5,6 +5,7 @@ import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import dev.vansen.commandutils.argument.Argument;
 import dev.vansen.commandutils.argument.ArgumentNester;
+import dev.vansen.commandutils.argument.ArgumentPosition;
 import dev.vansen.commandutils.command.CommandExecutor;
 import dev.vansen.commandutils.command.CommandWrapper;
 import dev.vansen.commandutils.completer.CompletionHandler;
@@ -118,6 +119,69 @@ public class SubCommand {
             return handler.complete(wrapped, wrapper);
         });
         argumentStack.add(arg);
+        return this;
+    }
+
+    /**
+     * Adds a completion handler to the last argument added to the subcommand.
+     *
+     * @param handler the {@link CompletionHandler} completion handler for the argument.
+     * @return this {@link SubCommand} instance for chaining.
+     */
+    @NotNull
+    @CanIgnoreReturnValue
+    public SubCommand completion(@NotNull CompletionHandler handler) {
+        argumentStack.getLast()
+                .suggests((context, builder) -> {
+                    CommandWrapper wrapped = new CommandWrapper(context);
+                    SuggestionsBuilderWrapper wrapper = new SuggestionsBuilderWrapper(builder);
+                    return handler.complete(wrapped, wrapper);
+                });
+        return this;
+    }
+
+    /**
+     * Adds a completion handler to the first or last argument added to the subcommand.
+     *
+     * @param handler the {@link CompletionHandler} completion handler for the argument.
+     * @return this {@link SubCommand} instance for chaining.
+     */
+    @NotNull
+    @CanIgnoreReturnValue
+    public SubCommand completion(@NotNull ArgumentPosition position, @NotNull CompletionHandler handler) {
+        switch (position) {
+            case ArgumentPosition.FIRST -> argumentStack.getFirst()
+                    .suggests((context, builder) -> {
+                        CommandWrapper wrapped = new CommandWrapper(context);
+                        SuggestionsBuilderWrapper wrapper = new SuggestionsBuilderWrapper(builder);
+                        return handler.complete(wrapped, wrapper);
+                    });
+            case ArgumentPosition.LAST -> argumentStack.getLast()
+                    .suggests((context, builder) -> {
+                        CommandWrapper wrapped = new CommandWrapper(context);
+                        SuggestionsBuilderWrapper wrapper = new SuggestionsBuilderWrapper(builder);
+                        return handler.complete(wrapped, wrapper);
+                    });
+        }
+        return this;
+    }
+
+    /**
+     * Adds a completion handler to the argument at the specified index.
+     *
+     * @param index   the index of the argument to add the completion handler to.
+     * @param handler the {@link CompletionHandler} completion handler for the argument.
+     * @return this {@link SubCommand} instance for chaining.
+     */
+    @NotNull
+    @CanIgnoreReturnValue
+    public SubCommand completion(int index, @NotNull CompletionHandler handler) {
+        argumentStack.get(index)
+                .suggests((context, builder) -> {
+                    CommandWrapper wrapped = new CommandWrapper(context);
+                    SuggestionsBuilderWrapper wrapper = new SuggestionsBuilderWrapper(builder);
+                    return handler.complete(wrapped, wrapper);
+                });
         return this;
     }
 

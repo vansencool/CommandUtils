@@ -359,4 +359,50 @@ public class CommandUtils {
             }
         });
     }
+
+    /**
+     * Registers the command with the provided description and aliases.
+     * This method should be used in most cases as it handles both namespaces and command registration fully.
+     */
+    public void register() {
+        build();
+    }
+
+    /**
+     * Registers the command under that plugin's name with the provided description and aliases.
+     * This method should be used in most cases as it handles both namespaces and command registration fully.
+     */
+    public void register(@NotNull LifecycleEventManager<Plugin> plugin) {
+        build(plugin);
+    }
+
+    /**
+     * Registers the command under that plugin's name with the provided description and aliases.
+     * This method should be used in most cases as it handles both namespaces and command registration fully.
+     */
+    public void register(@NotNull JavaPlugin plugin) {
+        build(plugin);
+    }
+
+    /**
+     * Registers the command under that pluginmeta's name with the provided description and aliases.
+     * This method should be used in most cases as it handles both namespaces and command registration fully.
+     */
+    public void register(@NotNull PluginMeta meta) {
+        build(meta);
+    }
+
+    /**
+     * @param namespace the namespace of the command.
+     * @see #build()
+     * @see #build(JavaPlugin)
+     * @see #build(LifecycleEventManager)
+     * @deprecated This method is not recommended for use because it does not support command descriptions and usages properly.
+     * <p></p>
+     * Additionally, commands registered using this method will be displayed as "A Mojang provided command" in the `/help` output.
+     */
+    @Deprecated
+    public void register(@NotNull String namespace) {
+        build(namespace);
+    }
 }

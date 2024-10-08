@@ -1,5 +1,6 @@
 package dev.vansen.commandutils.completer;
 
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.mojang.brigadier.suggestion.Suggestions;
 import dev.vansen.commandutils.command.CommandWrapper;
 import org.jetbrains.annotations.NotNull;
@@ -23,5 +24,6 @@ public interface CompletionHandler {
      * The future will contain the suggestions generated based on the provided context and wrapper.
      */
     @NotNull
+    @CanIgnoreReturnValue
     CompletableFuture<Suggestions> complete(@NotNull CommandWrapper context, @NotNull SuggestionsBuilderWrapper wrapper);
 }

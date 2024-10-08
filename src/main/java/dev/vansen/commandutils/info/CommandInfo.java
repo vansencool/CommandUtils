@@ -1,5 +1,6 @@
 package dev.vansen.commandutils.info;
 
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import dev.vansen.commandutils.permission.CommandPermission;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -37,6 +38,7 @@ public class CommandInfo {
      * @return this {@link CommandInfo} instance for method chaining.
      */
     @NotNull
+    @CanIgnoreReturnValue
     public CommandInfo description(@Nullable String description) {
         this.description = description;
         return this;
@@ -49,6 +51,7 @@ public class CommandInfo {
      * @return this {@link CommandInfo} instance for method chaining.
      */
     @NotNull
+    @CanIgnoreReturnValue
     public CommandInfo aliases(@NotNull String... aliases) {
         this.aliases = List.of(aliases);
         return this;
@@ -61,6 +64,7 @@ public class CommandInfo {
      * @return this {@link CommandInfo} instance for method chaining.
      */
     @NotNull
+    @CanIgnoreReturnValue
     public CommandInfo aliases(@NotNull List<String> aliases) {
         this.aliases = aliases;
         return this;
@@ -73,6 +77,7 @@ public class CommandInfo {
      * @return this {@link CommandInfo} instance for method chaining.
      */
     @NotNull
+    @CanIgnoreReturnValue
     public CommandInfo permission(@Nullable CommandPermission permission) {
         this.permission = permission;
         return this;

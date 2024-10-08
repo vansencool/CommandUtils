@@ -1,5 +1,6 @@
 package dev.vansen.commandutils.completer;
 
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import org.jetbrains.annotations.NotNull;
@@ -34,7 +35,9 @@ public class SuggestionsBuilderWrapper {
      * @param suggestion the text to be suggested. This should not be null.
      * @return this instance for method chaining.
      */
-    public @NotNull SuggestionsBuilderWrapper suggest(@NotNull String suggestion) {
+    @NotNull
+    @CanIgnoreReturnValue
+    public SuggestionsBuilderWrapper suggest(@NotNull String suggestion) {
         builder.suggest(suggestion);
         return this;
     }
@@ -46,7 +49,9 @@ public class SuggestionsBuilderWrapper {
      * @param tooltip    the tooltip to be shown with the suggestion. This should not be null.
      * @return this instance for method chaining.
      */
-    public @NotNull SuggestionsBuilderWrapper suggest(@NotNull String suggestion, @NotNull Tooltiper tooltip) {
+    @NotNull
+    @CanIgnoreReturnValue
+    public SuggestionsBuilderWrapper suggest(@NotNull String suggestion, @NotNull Tooltiper tooltip) {
         builder.suggest(suggestion, tooltip);
         return this;
     }
@@ -57,7 +62,8 @@ public class SuggestionsBuilderWrapper {
      *
      * @return a {@link CompletableFuture} containing the {@link Suggestions}.
      */
-    public @NotNull CompletableFuture<Suggestions> build() {
+    @NotNull
+    public CompletableFuture<Suggestions> build() {
         return builder.buildFuture();
     }
 }
