@@ -12,10 +12,8 @@ public class CommandPermission {
 
     /**
      * A predefined {@link CommandPermission} representing operator (OP) permissions.
-     * This permission is typically used to denote full access to all commands.
      */
     public static final CommandPermission OP = new CommandPermission(2);
-
     private final @Nullable String permission;
     private final int opLevel;
 
@@ -50,6 +48,17 @@ public class CommandPermission {
     @NotNull
     public static CommandPermission permission(@NotNull String permission) {
         return new CommandPermission(permission);
+    }
+
+    /**
+     * Factory method to create a {@link CommandPermission} based on an operator (OP) level.
+     *
+     * @param opLevel the OP level required to execute the command.
+     * @return a new {@link CommandPermission} instance with the specified operator (OP) level.
+     */
+    @NotNull
+    public static CommandPermission op(int opLevel) {
+        return new CommandPermission(opLevel);
     }
 
     /**

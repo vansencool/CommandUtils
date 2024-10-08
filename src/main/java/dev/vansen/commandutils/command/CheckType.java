@@ -20,5 +20,15 @@ public enum CheckType {
     /**
      * Represents a check to ensure the sender is an entity (such as a mob).
      */
-    ENTITY
+    ENTITY,
+
+    /**
+     * Represents a check to ensure the sender is a command block.
+     */
+    COMMAND_BLOCK,
+
+    /**
+     * Represents a check to ensure the sender is a proxied sender.
+     */
+    PROXIED_SENDER
 }

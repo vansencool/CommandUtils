@@ -3,7 +3,10 @@ package dev.vansen.commandutils.command;
 import com.mojang.brigadier.context.CommandContext;
 import dev.vansen.commandutils.exceptions.CmdException;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
+import org.bukkit.command.BlockCommandSender;
 import org.bukkit.command.CommandSender;
+import org.bukkit.command.ConsoleCommandSender;
+import org.bukkit.command.ProxiedCommandSender;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
@@ -60,6 +63,26 @@ public class CommandWrapper {
     }
 
     /**
+     * Retrieves the {@link BlockCommandSender} who executed the command.
+     *
+     * @return the block command sender who executed the command, can be null if the sender is not a command block.
+     */
+    @Nullable
+    public BlockCommandSender block() {
+        return context.getSource().getExecutor() instanceof BlockCommandSender sender ? sender : null;
+    }
+
+    /**
+     * Retrieves the {@link ProxiedCommandSender} who executed the command.
+     *
+     * @return the proxied command sender who executed the command, can be null if the sender is not a proxied command.
+     */
+    @Nullable
+    public ProxiedCommandSender proxied() {
+        return context.getSource().getExecutor() instanceof ProxiedCommandSender sender ? sender : null;
+    }
+
+    /**
      * Retrieves a command argument by its name and converts it to the specified type.
      *
      * @param arg   the name of the argument.
@@ -90,32 +113,54 @@ public class CommandWrapper {
      */
     public void check(@NotNull CheckType type) {
         if (type == CheckType.PLAYER && !(sender() instanceof Player)) {
-            throw new CmdException("<color:#ff4060>Exception -> You must be a player to execute this command</color>", sender());
+            throw new CmdException("<color:#ff4060>Exception: You must be a player to execute this command!</color>", sender());
         }
-        if (type == CheckType.CONSOLE && sender() instanceof Player) {
-            throw new CmdException("<color:#ff4060>Exception -> You must execute this command from the console</color>", sender());
+        if (type == CheckType.CONSOLE && !(sender() instanceof ConsoleCommandSender)) {
+            throw new CmdException("<color:#ff4060>Exception: You must execute this command from the console!</color>", sender());
         }
         if (type == CheckType.ENTITY && !(sender() instanceof Entity)) {
-            throw new CmdException("<color:#ff4060>Exception -> You must be an entity to execute this command</color>", sender());
+            throw new CmdException("<color:#ff4060>Exception: You must be an entity to execute this command!</color>", sender());
+        }
+        if (type == CheckType.COMMAND_BLOCK && !(sender() instanceof BlockCommandSender)) {
+            throw new CmdException("<color:#ff4060>Exception: This can only be executed by a command block!</color>", sender());
+        }
+        if (type == CheckType.PROXIED_SENDER && !(sender() instanceof ProxiedCommandSender)) {
+            throw new CmdException("<color:#ff4060>Exception: You must be a proxied command sender to execute this command!</color>", sender());
         }
     }
 
     /**
      * Checks whether the command sender meets the specified condition and throws a custom exception if not.
      *
-     * @param type         the type of check to be performed.
-     * @param errorMessage the custom error message to be sent if the check fails.
+     * @param type    the type of check to be performed.
+     * @param message the custom message to be sent if the check fails.
      * @throws CmdException if the check fails.
      */
-    public void check(@NotNull CheckType type, @NotNull String errorMessage) {
+    public void check(@NotNull CheckType type, @NotNull String message) {
         if (type == CheckType.PLAYER && !(sender() instanceof Player)) {
-            throw new CmdException(errorMessage, sender());
+            throw new CmdException(message, sender());
         }
         if (type == CheckType.CONSOLE && sender() instanceof Player) {
-            throw new CmdException(errorMessage, sender());
+            throw new CmdException(message, sender());
         }
         if (type == CheckType.ENTITY && !(sender() instanceof Entity)) {
-            throw new CmdException(errorMessage, sender());
+            throw new CmdException(message, sender());
         }
+        if (type == CheckType.COMMAND_BLOCK && !(sender() instanceof BlockCommandSender)) {
+            throw new CmdException(message, sender());
+        }
+        if (type == CheckType.PROXIED_SENDER && !(sender() instanceof ProxiedCommandSender)) {
+            throw new CmdException(message, sender());
+        }
+    }
+
+    /**
+     * Retrieves the underlying {@link CommandContext} of the command.
+     *
+     * @return the command context of the command.
+     */
+    @NotNull
+    public CommandContext<CommandSourceStack> context() {
+        return context;
     }
 }
