@@ -20,6 +20,15 @@ import io.papermc.paper.command.brigadier.Commands;
 import io.papermc.paper.plugin.configuration.PluginMeta;
 import io.papermc.paper.plugin.lifecycle.event.LifecycleEventManager;
 import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.event.HoverEvent;
+import net.kyori.adventure.text.format.NamedTextColor;
+import org.bukkit.command.BlockCommandSender;
+import org.bukkit.command.CommandSender;
+import org.bukkit.command.ConsoleCommandSender;
+import org.bukkit.command.ProxiedCommandSender;
+import org.bukkit.entity.Entity;
+import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.NotNull;
@@ -27,7 +36,10 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.function.Consumer;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * Utility class for building and registering Minecraft commands using Brigadier.
@@ -39,6 +51,12 @@ public class CommandUtils {
 
     private final LiteralArgumentBuilder<CommandSourceStack> builder;
     private final List<RequiredArgumentBuilder<CommandSourceStack, ?>> argumentStack = new ArrayList<>();
+    private CommandExecutor defaultExecutor;
+    private CommandExecutor playerExecutor;
+    private CommandExecutor consoleExecutor;
+    private CommandExecutor entityExecutor;
+    private CommandExecutor blockExecutor;
+    private CommandExecutor proxiedExecutor;
     @Nullable
     private String description = null;
     @Nullable
@@ -61,6 +79,40 @@ public class CommandUtils {
         return new CommandUtils(commandName);
     }
 
+    protected void execute() {
+        builder.executes(context -> {
+            CommandSender sender = context.getSource().getSender();
+            CommandWrapper wrapped = new CommandWrapper(context);
+
+            try {
+                switch (sender) {
+                    case Player player when playerExecutor != null -> playerExecutor.execute(wrapped);
+                    case ConsoleCommandSender consoleCommandSender when consoleExecutor != null ->
+                            consoleExecutor.execute(wrapped);
+                    case Entity entity when entityExecutor != null -> entityExecutor.execute(wrapped);
+                    case BlockCommandSender blockCommandSender when blockExecutor != null ->
+                            blockExecutor.execute(wrapped);
+                    case ProxiedCommandSender proxiedCommandSender when proxiedExecutor != null ->
+                            proxiedExecutor.execute(wrapped);
+                    default -> Optional.ofNullable(defaultExecutor).ifPresent(executor -> executor.execute(wrapped));
+                }
+                return 1;
+            } catch (CmdException e) {
+                e.send();
+                return 0;
+            } catch (Exception e) {
+                wrapped.sender()
+                        .sendMessage(Component.text("An exception occurred while executing the command, Hover over for more information")
+                                .color(NamedTextColor.RED)
+                                .hoverEvent(HoverEvent.showText(Component.text(
+                                        e.getCause().getMessage()
+                                ))));
+                Logger.getLogger("CommandUtils").log(Level.SEVERE, "An exception occurred while executing " + builder.getLiteral(), e);
+                return 0;
+            }
+        });
+    }
+
     /**
      * Sets the default executor for the command, which is called when the command
      * is executed without any arguments or when no other execution path is matched.
@@ -71,16 +123,77 @@ public class CommandUtils {
     @NotNull
     @CanIgnoreReturnValue
     public CommandUtils defaultExecute(@NotNull CommandExecutor executor) {
-        builder.executes(context -> {
-            CommandWrapper wrapped = new CommandWrapper(context);
-            try {
-                executor.execute(wrapped);
-                return 1;
-            } catch (CmdException e) {
-                e.send();
-                return 0;
-            }
-        });
+        defaultExecutor = executor;
+        return this;
+    }
+
+    /**
+     * Sets the executor for the command, but only if the {@link CommandSender} is a {@link Player}.
+     * If the sender is not a player, the executor is not called.
+     *
+     * @param executor the {@link CommandExecutor} to be executed if the sender is a player.
+     * @return this {@link CommandUtils} instance for chaining.
+     */
+    @NotNull
+    @CanIgnoreReturnValue
+    public CommandUtils playerExecute(@NotNull CommandExecutor executor) {
+        playerExecutor = executor;
+        return this;
+    }
+
+    /**
+     * Sets the executor for the command, but only if the {@link CommandSender} is a {@link ConsoleCommandSender}.
+     * If the sender is not a console, the executor is not called.
+     *
+     * @param executor the {@link CommandExecutor} to be executed if the sender is a console.
+     * @return this {@link CommandUtils} instance for chaining.
+     */
+    @NotNull
+    @CanIgnoreReturnValue
+    public CommandUtils consoleExecute(@NotNull CommandExecutor executor) {
+        consoleExecutor = executor;
+        return this;
+    }
+
+    /**
+     * Sets the executor for the command, but only if the {@link CommandSender} is an {@link Entity}.
+     * If the sender is not an entity, the executor is not called.
+     *
+     * @param executor the {@link CommandExecutor} to be executed if the sender is an entity.
+     * @return this {@link CommandUtils} instance for chaining.
+     */
+    @NotNull
+    @CanIgnoreReturnValue
+    public CommandUtils entityExecute(@NotNull CommandExecutor executor) {
+        entityExecutor = executor;
+        return this;
+    }
+
+    /**
+     * Sets the executor for the command, but only if the {@link CommandSender} is a {@link BlockCommandSender}.
+     * If the sender is not a command block, the executor is not called.
+     *
+     * @param executor the {@link CommandExecutor} to be executed if the sender is a block.
+     * @return this {@link CommandUtils} instance for chaining.
+     */
+    @NotNull
+    @CanIgnoreReturnValue
+    public CommandUtils blockExecute(@NotNull CommandExecutor executor) {
+        blockExecutor = executor;
+        return this;
+    }
+
+    /**
+     * Sets the executor for the command, but only if the {@link CommandSender} is a {@link ProxiedCommandSender}.
+     * If the sender is not a proxied sender, the executor is not called.
+     *
+     * @param executor the {@link CommandExecutor} to be executed if the sender is a proxied player.
+     * @return this {@link CommandUtils} instance for chaining.
+     */
+    @NotNull
+    @CanIgnoreReturnValue
+    public CommandUtils proxiedExecute(@NotNull CommandExecutor executor) {
+        proxiedExecutor = executor;
         return this;
     }
 
@@ -121,6 +234,15 @@ public class CommandUtils {
             } catch (CmdException e) {
                 e.send();
                 return 0;
+            } catch (Exception e) {
+                wrapped.sender()
+                        .sendMessage(Component.text("An exception occurred while executing the command, Hover over for more information")
+                                .color(NamedTextColor.RED)
+                                .hoverEvent(HoverEvent.showText(Component.text(
+                                        e.getCause().getMessage()
+                                ))));
+                Logger.getLogger("CommandUtils").log(Level.SEVERE, "An exception occurred while executing " + argument.name(), e);
+                return 0;
             }
         });
         argumentStack.add(arg);
@@ -148,6 +270,15 @@ public class CommandUtils {
                 return 1;
             } catch (CmdException e) {
                 e.send();
+                return 0;
+            } catch (Exception e) {
+                wrapped.sender()
+                        .sendMessage(Component.text("An exception occurred while executing the command, Hover over for more information")
+                                .color(NamedTextColor.RED)
+                                .hoverEvent(HoverEvent.showText(Component.text(
+                                        e.getCause().getMessage()
+                                ))));
+                Logger.getLogger("CommandUtils").log(Level.SEVERE, "An exception occurred while executing " + argument.name(), e);
                 return 0;
             }
         }).suggests((context, builder) -> {
@@ -288,6 +419,7 @@ public class CommandUtils {
     public void build() {
         CommandAPI.get().registerEventHandler(LifecycleEvents.COMMANDS, event -> {
             final Commands commands = event.registrar();
+            execute();
             ArgumentNester.nest(argumentStack, builder);
             commands.register(builder.build(), description, aliases == null ? List.of() : aliases);
         });
@@ -300,6 +432,7 @@ public class CommandUtils {
     public void build(@NotNull LifecycleEventManager<Plugin> plugin) {
         plugin.registerEventHandler(LifecycleEvents.COMMANDS, event -> {
             final Commands commands = event.registrar();
+            execute();
             ArgumentNester.nest(argumentStack, builder);
             commands.register(builder.build(), description, aliases == null ? List.of() : aliases);
         });
@@ -312,6 +445,7 @@ public class CommandUtils {
     public void build(@NotNull JavaPlugin plugin) {
         plugin.getLifecycleManager().registerEventHandler(LifecycleEvents.COMMANDS, event -> {
             final Commands commands = event.registrar();
+            execute();
             ArgumentNester.nest(argumentStack, builder);
             commands.register(builder.build(), description, aliases == null ? List.of() : aliases);
         });
@@ -324,6 +458,7 @@ public class CommandUtils {
     public void build(@NotNull PluginMeta meta) {
         CommandAPI.get().registerEventHandler(LifecycleEvents.COMMANDS, event -> {
             final Commands commands = event.registrar();
+            execute();
             ArgumentNester.nest(argumentStack, builder);
             commands.register(meta, builder.build(), description, aliases == null ? List.of() : aliases);
         });
@@ -342,6 +477,7 @@ public class CommandUtils {
     public void build(@NotNull String namespace) {
         CommandAPI.get().registerEventHandler(LifecycleEvents.COMMANDS, event -> {
             final Commands commands = event.registrar();
+            execute();
             ArgumentNester.nest(argumentStack, builder);
             commands.getDispatcher().register(builder);
             commands.getDispatcher().register(LiteralArgumentBuilder
@@ -372,7 +508,7 @@ public class CommandUtils {
      * Registers the command under that plugin's name with the provided description and aliases.
      * This method should be used in most cases as it handles both namespaces and command registration fully.
      */
-    public void register(@NotNull LifecycleEventManager<Plugin> plugin) {
+    public void register(@NotNull LifecycleEventManager<@NotNull Plugin> plugin) {
         build(plugin);
     }
 
@@ -395,6 +531,7 @@ public class CommandUtils {
     /**
      * @param namespace the namespace of the command.
      * @see #build()
+     * @see #build(PluginMeta)
      * @see #build(JavaPlugin)
      * @see #build(LifecycleEventManager)
      * @deprecated This method is not recommended for use because it does not support command descriptions and usages properly.

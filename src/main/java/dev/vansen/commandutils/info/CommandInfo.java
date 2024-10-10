@@ -39,7 +39,7 @@ public class CommandInfo {
      */
     @NotNull
     @CanIgnoreReturnValue
-    public CommandInfo description(@Nullable String description) {
+    public CommandInfo description(@NotNull String description) {
         this.description = description;
         return this;
     }
@@ -78,8 +78,21 @@ public class CommandInfo {
      */
     @NotNull
     @CanIgnoreReturnValue
-    public CommandInfo permission(@Nullable CommandPermission permission) {
+    public CommandInfo permission(@NotNull CommandPermission permission) {
         this.permission = permission;
+        return this;
+    }
+
+    /**
+     * Sets the required permission for the command.
+     *
+     * @param permission the {@link CommandPermission} required to execute the command.
+     * @return this {@link CommandInfo} instance for method chaining.
+     */
+    @NotNull
+    @CanIgnoreReturnValue
+    public CommandInfo permission(@NotNull String permission) {
+        this.permission = CommandPermission.permission(permission);
         return this;
     }
 

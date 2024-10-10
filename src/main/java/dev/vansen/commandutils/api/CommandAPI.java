@@ -9,7 +9,7 @@ import org.jetbrains.annotations.NotNull;
  * A utility class for managing and accessing the lifecycle event manager for command registration.
  * <p>
  * This class provides static methods to get and set the {@link LifecycleEventManager} instance,
- * which is essential for registering commands and handling related events.
+ * which is essential for registering commands.
  * </p>
  */
 @SuppressWarnings({"unused", "UnstableApiUsage"})

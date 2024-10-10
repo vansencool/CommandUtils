@@ -96,6 +96,162 @@ public class CommandWrapper {
     }
 
     /**
+     * Retrieves a command argument by its name and converts it to a boolean.
+     *
+     * @param arg the name of the argument.
+     * @return the argument value converted to a boolean.
+     */
+    public boolean argBoolean(@NotNull String arg) {
+        return context.getArgument(arg, Boolean.class);
+    }
+
+    /**
+     * Retrieves a command argument by its name and converts it to a string.
+     *
+     * @param arg the name of the argument.
+     * @return the argument value converted to a string.
+     */
+    public String argString(@NotNull String arg) {
+        return context.getArgument(arg, String.class);
+    }
+
+    /**
+     * Retrieves a command argument by its name and converts it to an integer.
+     *
+     * @param arg the name of the argument.
+     * @return the argument value converted to an integer.
+     */
+    public int argInt(@NotNull String arg) {
+        return context.getArgument(arg, Integer.class);
+    }
+
+    /**
+     * Retrieves a command argument by its name and converts it to a double.
+     *
+     * @param arg the name of the argument.
+     * @return the argument value converted to a double.
+     */
+    public double argDouble(@NotNull String arg) {
+        return context.getArgument(arg, Double.class);
+    }
+
+    /**
+     * Retrieves a command argument by its name and converts it to a float.
+     *
+     * @param arg the name of the argument.
+     * @return the argument value converted to a float.
+     */
+    public float argFloat(@NotNull String arg) {
+        return context.getArgument(arg, Float.class);
+    }
+
+    /**
+     * Retrieves a command argument by its name and converts it to a long.
+     *
+     * @param arg the name of the argument.
+     * @return the argument value converted to a long.
+     */
+    public long argLong(@NotNull String arg) {
+        return context.getArgument(arg, Long.class);
+    }
+
+    /**
+     * Retrieves a command argument by its name and converts it to a boolean.
+     * If the argument is not present or invalid, returns the default value.
+     *
+     * @param arg the name of the argument.
+     * @param def the default value to return if the argument is not present.
+     * @return the argument value converted to a boolean, or the default value if not present or invalid.
+     */
+    public boolean argBoolean(@NotNull String arg, boolean def) {
+        try {
+            return context.getArgument(arg, Boolean.class);
+        } catch (Exception e) {
+            return def;
+        }
+    }
+
+    /**
+     * Retrieves a command argument by its name and converts it to a string.
+     * If the argument is not present or invalid, returns the default value.
+     *
+     * @param arg the name of the argument.
+     * @param def the default value to return if the argument is not present.
+     * @return the argument value converted to a string, or the default value if not present or invalid.
+     */
+    public String argString(@NotNull String arg, @NotNull String def) {
+        try {
+            return context.getArgument(arg, String.class);
+        } catch (Exception e) {
+            return def;
+        }
+    }
+
+    /**
+     * Retrieves a command argument by its name and converts it to an integer.
+     * If the argument is not present or invalid, returns the default value.
+     *
+     * @param arg the name of the argument.
+     * @param def the default value to return if the argument is not present.
+     * @return the argument value converted to an integer, or the default value if not present or invalid.
+     */
+    public int argInt(@NotNull String arg, int def) {
+        try {
+            return context.getArgument(arg, Integer.class);
+        } catch (Exception e) {
+            return def;
+        }
+    }
+
+    /**
+     * Retrieves a command argument by its name and converts it to a double.
+     * If the argument is not present or invalid, returns the default value.
+     *
+     * @param arg the name of the argument.
+     * @param def the default value to return if the argument is not present.
+     * @return the argument value converted to a double, or the default value if not present or invalid.
+     */
+    public double argDouble(@NotNull String arg, double def) {
+        try {
+            return context.getArgument(arg, Double.class);
+        } catch (Exception e) {
+            return def;
+        }
+    }
+
+    /**
+     * Retrieves a command argument by its name and converts it to a float.
+     * If the argument is not present or invalid, returns the default value.
+     *
+     * @param arg the name of the argument.
+     * @param def the default value to return if the argument is not present.
+     * @return the argument value converted to a float, or the default value if not present or invalid.
+     */
+    public float argFloat(@NotNull String arg, float def) {
+        try {
+            return context.getArgument(arg, Float.class);
+        } catch (Exception e) {
+            return def;
+        }
+    }
+
+    /**
+     * Retrieves a command argument by its name and converts it to a long.
+     * If the argument is not present or invalid, returns the default value.
+     *
+     * @param arg the name of the argument.
+     * @param def the default value to return if the argument is not present.
+     * @return the argument value converted to a long, or the default value if not present or invalid.
+     */
+    public long argLong(@NotNull String arg, long def) {
+        try {
+            return context.getArgument(arg, Long.class);
+        } catch (Exception e) {
+            return def;
+        }
+    }
+
+    /**
      * Retrieves the entire input string of the command.
      *
      * @return the input string of the command.

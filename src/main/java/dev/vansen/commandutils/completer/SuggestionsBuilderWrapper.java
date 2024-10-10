@@ -5,6 +5,7 @@ import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -15,9 +16,6 @@ import java.util.concurrent.CompletableFuture;
 @SuppressWarnings("unused")
 public class SuggestionsBuilderWrapper {
 
-    /**
-     * The underlying {@link SuggestionsBuilder} instance used to build suggestions.
-     */
     private final @NotNull SuggestionsBuilder builder;
 
     /**
@@ -54,6 +52,47 @@ public class SuggestionsBuilderWrapper {
     public SuggestionsBuilderWrapper suggest(@NotNull String suggestion, @NotNull Tooltiper tooltip) {
         builder.suggest(suggestion, tooltip);
         return this;
+    }
+
+    /**
+     * Adds a suggestion to the list of completions with an associated tooltip.
+     *
+     * @param suggestion the text to be suggested. This should not be null.
+     * @param tooltip    the tooltip to be shown with the suggestion. This should not be null.
+     * @return this instance for method chaining.
+     */
+    @NotNull
+    @CanIgnoreReturnValue
+    public SuggestionsBuilderWrapper suggest(@NotNull String suggestion, @NotNull String tooltip) {
+        builder.suggest(suggestion, Tooltiper.of(tooltip));
+        return this;
+    }
+
+    /**
+     * Adds a suggestion to the list of completions with an associated tooltip.
+     *
+     * @param suggestion the suggestion to be added. This should not be null.
+     * @return this instance for method chaining.
+     */
+    @NotNull
+    @CanIgnoreReturnValue
+    public SuggestionsBuilderWrapper suggest(@NotNull Suggestion suggestion) {
+        Optional.ofNullable(suggestion.tooltip())
+                .ifPresentOrElse(
+                        tooltip -> builder.suggest(suggestion.text(), tooltip),
+                        () -> builder.suggest(suggestion.text()));
+        return this;
+    }
+
+    /**
+     * Builds and returns the suggestions as a {@link Suggestions}.
+     * This will only work if this is called in a separate thread.
+     *
+     * @return a {@link Suggestions}.
+     */
+    @NotNull
+    public Suggestions buildFuture() {
+        return builder.build();
     }
 
     /**

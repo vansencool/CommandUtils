@@ -7,6 +7,9 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
 
+/**
+ * Utility class for nesting arguments into a command.
+ */
 @SuppressWarnings({"unused", "UnstableApiUsage"})
 public class ArgumentNester {
 

@@ -12,10 +12,21 @@ import dev.vansen.commandutils.completer.CompletionHandler;
 import dev.vansen.commandutils.completer.SuggestionsBuilderWrapper;
 import dev.vansen.commandutils.exceptions.CmdException;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.event.HoverEvent;
+import net.kyori.adventure.text.format.NamedTextColor;
+import org.bukkit.command.BlockCommandSender;
+import org.bukkit.command.CommandSender;
+import org.bukkit.command.ConsoleCommandSender;
+import org.bukkit.command.ProxiedCommandSender;
+import org.bukkit.entity.Entity;
+import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * Represents a subcommand in the command system.
@@ -26,6 +37,12 @@ public class SubCommand {
 
     private final LiteralArgumentBuilder<CommandSourceStack> builder;
     private final List<RequiredArgumentBuilder<CommandSourceStack, ?>> argumentStack = new ArrayList<>();
+    private CommandExecutor defaultExecutor;
+    private CommandExecutor playerExecutor;
+    private CommandExecutor consoleExecutor;
+    private CommandExecutor entityExecutor;
+    private CommandExecutor blockExecutor;
+    private CommandExecutor proxiedExecutor;
 
     /**
      * Constructs a new subcommand with the specified name.
@@ -47,25 +64,123 @@ public class SubCommand {
         return new SubCommand(name);
     }
 
+    protected void execute() {
+        builder.executes(context -> {
+            CommandSender sender = context.getSource().getSender();
+            CommandWrapper wrapped = new CommandWrapper(context);
+
+            try {
+                switch (sender) {
+                    case Player player when playerExecutor != null -> playerExecutor.execute(wrapped);
+                    case ConsoleCommandSender consoleCommandSender when consoleExecutor != null ->
+                            consoleExecutor.execute(wrapped);
+                    case Entity entity when entityExecutor != null -> entityExecutor.execute(wrapped);
+                    case BlockCommandSender blockCommandSender when blockExecutor != null ->
+                            blockExecutor.execute(wrapped);
+                    case ProxiedCommandSender proxiedCommandSender when proxiedExecutor != null ->
+                            proxiedExecutor.execute(wrapped);
+                    default -> {
+                        if (defaultExecutor != null) defaultExecutor.execute(wrapped);
+                    }
+                }
+                return 1;
+            } catch (CmdException e) {
+                e.send();
+                return 0;
+            } catch (Exception e) {
+                wrapped.sender()
+                        .sendMessage(Component.text("An exception occurred while executing the command, Hover over for more information")
+                                .color(NamedTextColor.RED)
+                                .hoverEvent(HoverEvent.showText(Component.text(
+                                        e.getCause().getMessage()
+                                ))));
+                Logger.getLogger("CommandUtils").log(Level.SEVERE, "An exception occurred while executing " + builder.getLiteral(), e);
+                return 0;
+            }
+        });
+    }
+
     /**
-     * Sets the execution logic for the subcommand.
-     * This method defines what happens when the subcommand is executed.
+     * Sets the default executor for the command, which is called when the command
+     * is executed without any arguments or when no other execution path is matched.
      *
-     * @param executor the {@link CommandExecutor} that handles execution.
+     * @param executor the {@link CommandExecutor} to be executed by default.
      * @return this {@link SubCommand} instance for chaining.
      */
     @NotNull
     @CanIgnoreReturnValue
-    public SubCommand execution(@NotNull CommandExecutor executor) {
-        builder.executes(context -> {
-            try {
-                CommandWrapper wrapped = new CommandWrapper(context);
-                executor.execute(wrapped);
-            } catch (CmdException e) {
-                e.send();
-            }
-            return 1;
-        });
+    public SubCommand defaultExecute(@NotNull CommandExecutor executor) {
+        defaultExecutor = executor;
+        return this;
+    }
+
+    /**
+     * Sets the executor for the command, but only if the {@link CommandSender} is a {@link Player}.
+     * If the sender is not a player, the executor is not called.
+     *
+     * @param executor the {@link CommandExecutor} to be executed if the sender is a player.
+     * @return this {@link SubCommand} instance for chaining.
+     */
+    @NotNull
+    @CanIgnoreReturnValue
+    public SubCommand playerExecute(@NotNull CommandExecutor executor) {
+        playerExecutor = executor;
+        return this;
+    }
+
+    /**
+     * Sets the executor for the command, but only if the {@link CommandSender} is a {@link ConsoleCommandSender}.
+     * If the sender is not a console, the executor is not called.
+     *
+     * @param executor the {@link CommandExecutor} to be executed if the sender is a console.
+     * @return this {@link SubCommand} instance for chaining.
+     */
+    @NotNull
+    @CanIgnoreReturnValue
+    public SubCommand consoleExecute(@NotNull CommandExecutor executor) {
+        consoleExecutor = executor;
+        return this;
+    }
+
+    /**
+     * Sets the executor for the command, but only if the {@link CommandSender} is an {@link Entity}.
+     * If the sender is not an entity, the executor is not called.
+     *
+     * @param executor the {@link CommandExecutor} to be executed if the sender is an entity.
+     * @return this {@link SubCommand} instance for chaining.
+     */
+    @NotNull
+    @CanIgnoreReturnValue
+    public SubCommand entityExecute(@NotNull CommandExecutor executor) {
+        entityExecutor = executor;
+        return this;
+    }
+
+    /**
+     * Sets the executor for the command, but only if the {@link CommandSender} is a {@link BlockCommandSender}.
+     * If the sender is not a command block, the executor is not called.
+     *
+     * @param executor the {@link CommandExecutor} to be executed if the sender is a block.
+     * @return this {@link SubCommand} instance for chaining.
+     */
+    @NotNull
+    @CanIgnoreReturnValue
+    public SubCommand blockExecute(@NotNull CommandExecutor executor) {
+        blockExecutor = executor;
+        return this;
+    }
+
+    /**
+     * Sets the executor for the command, but only if the {@link CommandSender} is a {@link ProxiedCommandSender}.
+     * If the sender is not a proxied sender, the executor is not called.
+     *
+     * @param executor the {@link CommandExecutor} to be executed if the sender is a proxied player.
+     * @return this {@link SubCommand} instance for chaining.
+     */
+    @NotNull
+    @CanIgnoreReturnValue
+    public SubCommand proxiedExecute(@NotNull CommandExecutor executor) {
+        proxiedExecutor = executor;
         return this;
     }
 
@@ -106,6 +221,15 @@ public class SubCommand {
             } catch (CmdException e) {
                 e.send();
                 return 0;
+            } catch (Exception e) {
+                wrapped.sender()
+                        .sendMessage(Component.text("An exception occurred while executing the command, Hover over for more information")
+                                .color(NamedTextColor.RED)
+                                .hoverEvent(HoverEvent.showText(Component.text(
+                                        e.getCause().getMessage()
+                                ))));
+                Logger.getLogger("CommandUtils").log(Level.SEVERE, "An exception occurred while executing " + argument.name(), e);
+                return 0;
             }
         });
         argumentStack.add(arg);
@@ -133,6 +257,15 @@ public class SubCommand {
                 return 1;
             } catch (CmdException e) {
                 e.send();
+                return 0;
+            } catch (Exception e) {
+                wrapped.sender()
+                        .sendMessage(Component.text("An exception occurred while executing the command, Hover over for more information")
+                                .color(NamedTextColor.RED)
+                                .hoverEvent(HoverEvent.showText(Component.text(
+                                        e.getCause().getMessage()
+                                ))));
+                Logger.getLogger("CommandUtils").log(Level.SEVERE, "An exception occurred while executing " + argument.name(), e);
                 return 0;
             }
         }).suggests((context, builder) -> {
