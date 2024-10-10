@@ -37,7 +37,6 @@ import org.jetbrains.annotations.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.function.Consumer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -392,17 +391,15 @@ public class CommandUtils {
     /**
      * Adds additional metadata to the command, such as aliases, description, and permissions.
      *
-     * @param info a {@link Consumer} that accepts a {@link CommandInfo} object for setting metadata.
+     * @param info a {@link CommandInfo} for setting metadata.
      * @return this {@link CommandUtils} instance for chaining.
      */
     @NotNull
     @CanIgnoreReturnValue
-    public CommandUtils info(@NotNull Consumer<CommandInfo> info) {
-        CommandInfo commandInfo = CommandInfo.info();
-        info.accept(commandInfo);
-        this.aliases = commandInfo.getAliases();
-        this.description = commandInfo.getDescription();
-        CommandPermission permission = commandInfo.getPermission();
+    public CommandUtils info(@NotNull CommandInfo info) {
+        this.aliases = info.getAliases();
+        this.description = info.getDescription();
+        CommandPermission permission = info.getPermission();
         if (permission == null) return this;
         if (permission.isOpPermission()) {
             builder.requires(consumer -> consumer.getSender().isOp());
