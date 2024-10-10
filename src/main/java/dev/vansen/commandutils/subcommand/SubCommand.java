@@ -12,9 +12,6 @@ import dev.vansen.commandutils.completer.CompletionHandler;
 import dev.vansen.commandutils.completer.SuggestionsBuilderWrapper;
 import dev.vansen.commandutils.exceptions.CmdException;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
-import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.event.HoverEvent;
-import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.command.BlockCommandSender;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.ConsoleCommandSender;
@@ -25,8 +22,6 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  * Represents a subcommand in the command system.
@@ -87,17 +82,14 @@ public class SubCommand {
             } catch (CmdException e) {
                 e.send();
                 return 0;
-            } catch (Exception e) {
-                wrapped.sender()
-                        .sendMessage(Component.text("An exception occurred while executing the command, Hover over for more information")
-                                .color(NamedTextColor.RED)
-                                .hoverEvent(HoverEvent.showText(Component.text(
-                                        e.getCause().getMessage()
-                                ))));
-                Logger.getLogger("CommandUtils").log(Level.SEVERE, "An exception occurred while executing " + builder.getLiteral(), e);
-                return 0;
             }
         });
+    }
+
+    protected void executeIf() {
+        if (defaultExecutor != null || playerExecutor != null || consoleExecutor != null || blockExecutor != null || proxiedExecutor != null) {
+            execute();
+        }
     }
 
     /**
@@ -221,15 +213,6 @@ public class SubCommand {
             } catch (CmdException e) {
                 e.send();
                 return 0;
-            } catch (Exception e) {
-                wrapped.sender()
-                        .sendMessage(Component.text("An exception occurred while executing the command, Hover over for more information")
-                                .color(NamedTextColor.RED)
-                                .hoverEvent(HoverEvent.showText(Component.text(
-                                        e.getCause().getMessage()
-                                ))));
-                Logger.getLogger("CommandUtils").log(Level.SEVERE, "An exception occurred while executing " + argument.name(), e);
-                return 0;
             }
         });
         argumentStack.add(arg);
@@ -257,15 +240,6 @@ public class SubCommand {
                 return 1;
             } catch (CmdException e) {
                 e.send();
-                return 0;
-            } catch (Exception e) {
-                wrapped.sender()
-                        .sendMessage(Component.text("An exception occurred while executing the command, Hover over for more information")
-                                .color(NamedTextColor.RED)
-                                .hoverEvent(HoverEvent.showText(Component.text(
-                                        e.getCause().getMessage()
-                                ))));
-                Logger.getLogger("CommandUtils").log(Level.SEVERE, "An exception occurred while executing " + argument.name(), e);
                 return 0;
             }
         }).suggests((context, builder) -> {
@@ -347,6 +321,7 @@ public class SubCommand {
      */
     @NotNull
     public LiteralArgumentBuilder<CommandSourceStack> get() {
+        executeIf();
         ArgumentNester.nest(argumentStack, builder);
         return builder;
     }

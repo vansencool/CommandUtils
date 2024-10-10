@@ -20,9 +20,6 @@ import io.papermc.paper.command.brigadier.Commands;
 import io.papermc.paper.plugin.configuration.PluginMeta;
 import io.papermc.paper.plugin.lifecycle.event.LifecycleEventManager;
 import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents;
-import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.event.HoverEvent;
-import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.command.BlockCommandSender;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.ConsoleCommandSender;
@@ -37,8 +34,6 @@ import org.jetbrains.annotations.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  * Utility class for building and registering Minecraft commands using Brigadier.
@@ -61,9 +56,12 @@ public class CommandUtils {
     @Nullable
     private List<String> aliases = null;
 
-
-    // Private constructor
-    private CommandUtils(@NotNull String commandName) {
+    /**
+     * Constructs a new command builder with the specified name.
+     *
+     * @param commandName the name of the command.
+     */
+    public CommandUtils(@NotNull String commandName) {
         builder = LiteralArgumentBuilder.literal(commandName);
     }
 
@@ -75,6 +73,17 @@ public class CommandUtils {
      */
     @NotNull
     public static CommandUtils newCommand(@NotNull String commandName) {
+        return new CommandUtils(commandName);
+    }
+
+    /**
+     * Factory method to create a new command builder.
+     *
+     * @param commandName the name of the command.
+     * @return a new instance of {@link CommandUtils}.
+     */
+    @NotNull
+    public static CommandUtils command(@NotNull String commandName) {
         return new CommandUtils(commandName);
     }
 
@@ -99,17 +108,14 @@ public class CommandUtils {
             } catch (CmdException e) {
                 e.send();
                 return 0;
-            } catch (Exception e) {
-                wrapped.sender()
-                        .sendMessage(Component.text("An exception occurred while executing the command, Hover over for more information")
-                                .color(NamedTextColor.RED)
-                                .hoverEvent(HoverEvent.showText(Component.text(
-                                        e.getCause().getMessage()
-                                ))));
-                Logger.getLogger("CommandUtils").log(Level.SEVERE, "An exception occurred while executing " + builder.getLiteral(), e);
-                return 0;
             }
         });
+    }
+
+    protected void executeIf() {
+        if (defaultExecutor != null || playerExecutor != null || consoleExecutor != null || blockExecutor != null || proxiedExecutor != null) {
+            execute();
+        }
     }
 
     /**
@@ -233,15 +239,6 @@ public class CommandUtils {
             } catch (CmdException e) {
                 e.send();
                 return 0;
-            } catch (Exception e) {
-                wrapped.sender()
-                        .sendMessage(Component.text("An exception occurred while executing the command, Hover over for more information")
-                                .color(NamedTextColor.RED)
-                                .hoverEvent(HoverEvent.showText(Component.text(
-                                        e.getCause().getMessage()
-                                ))));
-                Logger.getLogger("CommandUtils").log(Level.SEVERE, "An exception occurred while executing " + argument.name(), e);
-                return 0;
             }
         });
         argumentStack.add(arg);
@@ -269,15 +266,6 @@ public class CommandUtils {
                 return 1;
             } catch (CmdException e) {
                 e.send();
-                return 0;
-            } catch (Exception e) {
-                wrapped.sender()
-                        .sendMessage(Component.text("An exception occurred while executing the command, Hover over for more information")
-                                .color(NamedTextColor.RED)
-                                .hoverEvent(HoverEvent.showText(Component.text(
-                                        e.getCause().getMessage()
-                                ))));
-                Logger.getLogger("CommandUtils").log(Level.SEVERE, "An exception occurred while executing " + argument.name(), e);
                 return 0;
             }
         }).suggests((context, builder) -> {
@@ -416,7 +404,7 @@ public class CommandUtils {
     public void build() {
         CommandAPI.get().registerEventHandler(LifecycleEvents.COMMANDS, event -> {
             final Commands commands = event.registrar();
-            execute();
+            executeIf();
             ArgumentNester.nest(argumentStack, builder);
             commands.register(builder.build(), description, aliases == null ? List.of() : aliases);
         });
@@ -429,7 +417,7 @@ public class CommandUtils {
     public void build(@NotNull LifecycleEventManager<Plugin> plugin) {
         plugin.registerEventHandler(LifecycleEvents.COMMANDS, event -> {
             final Commands commands = event.registrar();
-            execute();
+            executeIf();
             ArgumentNester.nest(argumentStack, builder);
             commands.register(builder.build(), description, aliases == null ? List.of() : aliases);
         });
@@ -442,7 +430,7 @@ public class CommandUtils {
     public void build(@NotNull JavaPlugin plugin) {
         plugin.getLifecycleManager().registerEventHandler(LifecycleEvents.COMMANDS, event -> {
             final Commands commands = event.registrar();
-            execute();
+            executeIf();
             ArgumentNester.nest(argumentStack, builder);
             commands.register(builder.build(), description, aliases == null ? List.of() : aliases);
         });
@@ -455,7 +443,7 @@ public class CommandUtils {
     public void build(@NotNull PluginMeta meta) {
         CommandAPI.get().registerEventHandler(LifecycleEvents.COMMANDS, event -> {
             final Commands commands = event.registrar();
-            execute();
+            executeIf();
             ArgumentNester.nest(argumentStack, builder);
             commands.register(meta, builder.build(), description, aliases == null ? List.of() : aliases);
         });
@@ -474,7 +462,7 @@ public class CommandUtils {
     public void build(@NotNull String namespace) {
         CommandAPI.get().registerEventHandler(LifecycleEvents.COMMANDS, event -> {
             final Commands commands = event.registrar();
-            execute();
+            executeIf();
             ArgumentNester.nest(argumentStack, builder);
             commands.getDispatcher().register(builder);
             commands.getDispatcher().register(LiteralArgumentBuilder
