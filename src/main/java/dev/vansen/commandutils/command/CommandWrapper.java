@@ -2,6 +2,7 @@ package dev.vansen.commandutils.command;
 
 import com.mojang.brigadier.context.CommandContext;
 import dev.vansen.commandutils.exceptions.CmdException;
+import dev.vansen.commandutils.sender.SenderTypes;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 import org.bukkit.command.BlockCommandSender;
 import org.bukkit.command.CommandSender;
@@ -249,6 +250,107 @@ public class CommandWrapper {
         } catch (Exception e) {
             return def;
         }
+    }
+
+    /**
+     * Retrieves the plain sender type of the given context.
+     *
+     * @return the plain sender type, can be "player", "console", "entity", "command_block", "proxied_sender" or "unknown".
+     */
+    public String plainSender() {
+        return switch (senderType(sender())) {
+            case PLAYER -> "player";
+            case CONSOLE -> "console";
+            case ENTITY -> "entity";
+            case COMMAND_BLOCK -> "command_block";
+            case PROXIED -> "proxied_sender";
+            default -> "unknown";
+        };
+    }
+
+    /**
+     * Retrieves the friendly sender type of the given context.
+     *
+     * @return the friendly sender type, can be "Player", "Console", "Entity", "Command Block", "Proxied Command Sender" or "Unknown".
+     */
+    public String friendlySender() {
+        return switch (senderType(sender())) {
+            case PLAYER -> "Player";
+            case CONSOLE -> "Console";
+            case ENTITY -> "Entity";
+            case COMMAND_BLOCK -> "Command Block";
+            case PROXIED -> "Proxied Command Sender";
+            default -> "Unknown";
+        };
+    }
+
+    /**
+     * Checks if the sender is a player.
+     *
+     * @return true if the sender is a player, false otherwise.
+     */
+    public boolean isPlayer() {
+        return senderType(sender()) == SenderTypes.PLAYER;
+    }
+
+    /**
+     * Checks if the sender is the console.
+     *
+     * @return true if the sender is the console, false otherwise.
+     */
+    public boolean isConsole() {
+        return senderType(sender()) == SenderTypes.CONSOLE;
+    }
+
+    /**
+     * Checks if the sender is an entity.
+     *
+     * @return true if the sender is an entity, false otherwise.
+     */
+    public boolean isEntity() {
+        return senderType(sender()) == SenderTypes.ENTITY;
+    }
+
+    /**
+     * Checks if the sender is a command block.
+     *
+     * @return true if the sender is a command block, false otherwise.
+     */
+    public boolean isBlock() {
+        return senderType(sender()) == SenderTypes.COMMAND_BLOCK;
+    }
+
+    /**
+     * Checks if the sender is a proxied command sender.
+     *
+     * @return true if the sender is a proxied command sender, false otherwise.
+     */
+    public boolean isProxied() {
+        return senderType(sender()) == SenderTypes.PROXIED;
+    }
+
+    /**
+     * Retrieves the sender type of the given sender.
+     *
+     * @return the sender type.
+     */
+    public SenderTypes senderType(Object sender) {
+        if (sender instanceof Player) {
+            return SenderTypes.PLAYER;
+        }
+        if (sender instanceof ConsoleCommandSender) {
+            return SenderTypes.CONSOLE;
+        }
+        if (sender instanceof Entity) {
+            return SenderTypes.ENTITY;
+        }
+        if (sender instanceof BlockCommandSender) {
+            return SenderTypes.COMMAND_BLOCK;
+        }
+        if (sender instanceof ProxiedCommandSender) {
+            return SenderTypes.PROXIED;
+        }
+        return SenderTypes.UNKNOWN;
     }
 
     /**
