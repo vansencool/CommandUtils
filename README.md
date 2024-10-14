@@ -34,5 +34,8 @@ dependencies {
 </dependency>
 ```
 
+# How does this work?
+![wrap](https://i.imgur.com/LunZr4t.png)
+
 # How to use it?
 You can visit https://vansen.gitbook.io/commandutils/ on how to use it!
