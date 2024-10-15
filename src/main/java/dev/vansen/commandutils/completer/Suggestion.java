@@ -50,6 +50,38 @@ public class Suggestion {
     }
 
     /**
+     * Factory method to create a new instance of {@link Suggestion}.
+     *
+     * @param text the text of the suggestion
+     * @return a new {@link Suggestion} instance
+     */
+    public Suggestion of(@NotNull String text) {
+        return new Suggestion(text);
+    }
+
+    /**
+     * Factory method to create a new instance of {@link Suggestion}.
+     *
+     * @param text    the text of the suggestion
+     * @param tooltip the tooltip associated with the suggestion
+     * @return a new {@link Suggestion} instance
+     */
+    public Suggestion of(@NotNull String text, @NotNull Tooltiper tooltip) {
+        return new Suggestion(text, tooltip);
+    }
+
+    /**
+     * Factory method to create a new instance of {@link Suggestion}.
+     *
+     * @param text    the text of the suggestion
+     * @param tooltip the tooltip associated with the suggestion
+     * @return a new {@link Suggestion} instance
+     */
+    public Suggestion of(@NotNull String text, @NotNull String tooltip) {
+        return new Suggestion(text, tooltip);
+    }
+
+    /**
      * Returns the text of the suggestion.
      *
      * @return the text of the suggestion

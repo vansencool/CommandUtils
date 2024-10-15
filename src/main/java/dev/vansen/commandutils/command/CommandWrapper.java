@@ -4,14 +4,23 @@ import com.mojang.brigadier.context.CommandContext;
 import dev.vansen.commandutils.exceptions.CmdException;
 import dev.vansen.commandutils.sender.SenderTypes;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
+import net.kyori.adventure.text.Component;
+import org.bukkit.Bukkit;
+import org.bukkit.GameMode;
+import org.bukkit.OfflinePlayer;
+import org.bukkit.World;
 import org.bukkit.command.BlockCommandSender;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.ConsoleCommandSender;
 import org.bukkit.command.ProxiedCommandSender;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+
+import java.util.Arrays;
+import java.util.function.Predicate;
 
 /**
  * A wrapper class for managing and accessing command context information within a command execution.
@@ -19,9 +28,7 @@ import org.jetbrains.annotations.Nullable;
  * and handle exceptions.
  */
 @SuppressWarnings({"unused", "UnstableApiUsage"})
-public class CommandWrapper {
-
-    private final CommandContext<CommandSourceStack> context;
+public record CommandWrapper(CommandContext<CommandSourceStack> context) {
 
     /**
      * Constructs a new {@link CommandWrapper} with the given command context.
@@ -84,6 +91,76 @@ public class CommandWrapper {
     }
 
     /**
+     * Retrieves the {@link Player} with the given name.
+     *
+     * @param name the name of the player.
+     * @return the player with the given name, can be null if the player does not exist.
+     */
+    @Nullable
+    public Player player(@NotNull String name) {
+        return Bukkit.getPlayer(name);
+    }
+
+    /**
+     * Checks if a player with the given name exists.
+     *
+     * @param name the name of the player.
+     * @return true if the player exists, false otherwise.
+     */
+    public boolean playerExists(@NotNull String name) {
+        return Bukkit.getPlayer(name) != null;
+    }
+
+    /**
+     * Retrieves the {@link OfflinePlayer} with the given name.
+     *
+     * @param name the name of the player.
+     * @return the offline player with the given name
+     */
+    @NotNull
+    public OfflinePlayer offlinePlayer(@NotNull String name) {
+        return Bukkit.getOfflinePlayer(name);
+    }
+
+    /**
+     * Sends a response to the command sender as a rich message.
+     *
+     * @param message the message to send
+     */
+    public void response(@NotNull String message) {
+        sender().sendRichMessage(message);
+    }
+
+    /**
+     * Sends a response to the command sender as a component message.
+     *
+     * @param message the message to send
+     */
+    public void response(@NotNull Component message) {
+        sender().sendMessage(message);
+    }
+
+    /**
+     * Sends multiple responses to the command sender as rich messages.
+     *
+     * @param messages the messages to send
+     */
+    public void response(@NotNull String... messages) {
+        Arrays.stream(messages)
+                .forEach(message -> sender().sendRichMessage(message));
+    }
+
+    /**
+     * Sends multiple responses to the command sender as component messages.
+     *
+     * @param messages the messages to send
+     */
+    public void response(@NotNull Component... messages) {
+        Arrays.stream(messages)
+                .forEach(message -> sender().sendMessage(message));
+    }
+
+    /**
      * Retrieves a command argument by its name and converts it to the specified type.
      *
      * @param arg   the name of the argument.
@@ -94,6 +171,49 @@ public class CommandWrapper {
     @NotNull
     public <T> T arg(@NotNull String arg, @NotNull Class<T> clazz) {
         return context.getArgument(arg, clazz);
+    }
+
+    /**
+     * Retrieves a command argument by its name and converts it to the specified type.
+     * If the argument does not exist, or inconvertible, the default value is returned.
+     *
+     * @param arg          the name of the argument.
+     * @param clazz        the class of the argument type.
+     * @param defaultValue the default value to return if the argument does not exist.
+     * @param <T>          the type of the argument.
+     * @return the argument value converted to the specified type or the default value if the argument does not exist.
+     */
+    @NotNull
+    public <T> T arg(@NotNull String arg, @NotNull Class<T> clazz, @NotNull T defaultValue) {
+        try {
+            return arg(arg, clazz);
+        } catch (Exception e) {
+            return defaultValue;
+        }
+    }
+
+    /**
+     * Helper method to get arguments safely for the user.
+     * Automatically parses the input to get the arguments in the command.
+     *
+     * @param index The index of the argument to retrieve (0-based), 0 is being the command itself (i.e. /example).
+     * @return The argument at the given index, or an empty string if not available.
+     */
+    public String arg(int index) {
+        String[] args = input().split(" ");
+        if (index < args.length) {
+            return args[index];
+        }
+        return ""; // Return empty if the argument does not exist
+    }
+
+    /**
+     * Helper method to get the number of arguments.
+     *
+     * @return The number of arguments in the command.
+     */
+    public int argCount() {
+        return input().split(" ").length;
     }
 
     /**
@@ -157,6 +277,36 @@ public class CommandWrapper {
     }
 
     /**
+     * Retrieves a command argument by its name and converts it to a world.
+     *
+     * @param arg the name of the argument.
+     * @return the argument value converted to a world.
+     */
+    public World argWorld(@NotNull String arg) {
+        return Bukkit.getWorld(arg.replace("minecraft:", ""));
+    }
+
+    /**
+     * Retrieves a command argument by its name and converts it to a game mode.
+     *
+     * @param arg the name of the argument.
+     * @return the argument value converted to a game mode.
+     */
+    public GameMode argGameMode(@NotNull String arg) {
+        return GameMode.valueOf(arg.toUpperCase());
+    }
+
+    /**
+     * Retrieves a command argument by its name and converts it to an item stack.
+     *
+     * @param arg the name of the argument.
+     * @return the argument value converted to an item stack.
+     */
+    public ItemStack argItemStack(@NotNull String arg) {
+        return context.getArgument(arg, ItemStack.class);
+    }
+
+    /**
      * Retrieves a command argument by its name and converts it to a boolean.
      * If the argument is not present or invalid, returns the default value.
      *
@@ -165,11 +315,7 @@ public class CommandWrapper {
      * @return the argument value converted to a boolean, or the default value if not present or invalid.
      */
     public boolean argBoolean(@NotNull String arg, boolean def) {
-        try {
-            return context.getArgument(arg, Boolean.class);
-        } catch (Exception e) {
-            return def;
-        }
+        return arg(arg, Boolean.class, def);
     }
 
     /**
@@ -181,11 +327,7 @@ public class CommandWrapper {
      * @return the argument value converted to a string, or the default value if not present or invalid.
      */
     public String argString(@NotNull String arg, @NotNull String def) {
-        try {
-            return context.getArgument(arg, String.class);
-        } catch (Exception e) {
-            return def;
-        }
+        return arg(arg, String.class, def);
     }
 
     /**
@@ -197,11 +339,7 @@ public class CommandWrapper {
      * @return the argument value converted to an integer, or the default value if not present or invalid.
      */
     public int argInt(@NotNull String arg, int def) {
-        try {
-            return context.getArgument(arg, Integer.class);
-        } catch (Exception e) {
-            return def;
-        }
+        return arg(arg, Integer.class, def);
     }
 
     /**
@@ -213,11 +351,7 @@ public class CommandWrapper {
      * @return the argument value converted to a double, or the default value if not present or invalid.
      */
     public double argDouble(@NotNull String arg, double def) {
-        try {
-            return context.getArgument(arg, Double.class);
-        } catch (Exception e) {
-            return def;
-        }
+        return arg(arg, Double.class, def);
     }
 
     /**
@@ -229,11 +363,7 @@ public class CommandWrapper {
      * @return the argument value converted to a float, or the default value if not present or invalid.
      */
     public float argFloat(@NotNull String arg, float def) {
-        try {
-            return context.getArgument(arg, Float.class);
-        } catch (Exception e) {
-            return def;
-        }
+        return arg(arg, Float.class, def);
     }
 
     /**
@@ -245,8 +375,52 @@ public class CommandWrapper {
      * @return the argument value converted to a long, or the default value if not present or invalid.
      */
     public long argLong(@NotNull String arg, long def) {
+        return arg(arg, Long.class, def);
+    }
+
+    /**
+     * Retrieves a command argument by its name and converts it to a world.
+     * If the argument is not present or invalid, returns the default value.
+     *
+     * @param arg the name of the argument.
+     * @param def the default value to return if the argument is not present.
+     * @return the argument value converted to a world, or the default value if not present or invalid.
+     */
+    public World argWorld(@NotNull String arg, World def) {
         try {
-            return context.getArgument(arg, Long.class);
+            return argWorld(arg);
+        } catch (Exception e) {
+            return def;
+        }
+    }
+
+    /**
+     * Retrieves a command argument by its name and converts it to a game mode.
+     * If the argument is not present or invalid, returns the default value.
+     *
+     * @param arg the name of the argument.
+     * @param def the default value to return if the argument is not present.
+     * @return the argument value converted to a game mode, or the default value if not present or invalid.
+     */
+    public GameMode argGameMode(@NotNull String arg, GameMode def) {
+        try {
+            return argGameMode(arg);
+        } catch (Exception e) {
+            return def;
+        }
+    }
+
+    /**
+     * Retrieves a command argument by its name and converts it to an item stack.
+     * If the argument is not present or invalid, returns the default value.
+     *
+     * @param arg the name of the argument.
+     * @param def the default value to return if the argument is not present.
+     * @return the argument value converted to an item stack, or the default value if not present or invalid.
+     */
+    public ItemStack argItemStack(@NotNull String arg, ItemStack def) {
+        try {
+            return argItemStack(arg);
         } catch (Exception e) {
             return def;
         }
@@ -413,10 +587,52 @@ public class CommandWrapper {
     }
 
     /**
+     * Adds a custom check to the command.
+     * If the check fails, a CmdException is thrown.
+     *
+     * @param check the custom check to add
+     * @throws CmdException if the check fails
+     */
+    public void check(@NotNull Predicate<CommandWrapper> check) {
+        if (!check.test(this)) {
+            throw new CmdException((Component) null, null);
+        }
+    }
+
+    /**
+     * Adds a custom check to the command.
+     * If the check fails, a CmdException is thrown.
+     *
+     * @param check   the custom check to add
+     * @param message the custom message to be sent if the check fails
+     * @throws CmdException if the check fails
+     */
+    public void check(@NotNull Predicate<CommandWrapper> check, @NotNull String message) {
+        if (!check.test(this)) {
+            throw new CmdException(message, sender());
+        }
+    }
+
+    /**
+     * Adds a custom check to the command.
+     * If the check fails, a CmdException is thrown.
+     *
+     * @param check   the custom check to add
+     * @param message the custom message to be sent if the check fails
+     * @throws CmdException if the check fails
+     */
+    public void check(@NotNull Predicate<CommandWrapper> check, @NotNull Component message) {
+        if (!check.test(this)) {
+            throw new CmdException(message, sender());
+        }
+    }
+
+    /**
      * Retrieves the underlying {@link CommandContext} of the command.
      *
      * @return the command context of the command.
      */
+    @Override
     @NotNull
     public CommandContext<CommandSourceStack> context() {
         return context;

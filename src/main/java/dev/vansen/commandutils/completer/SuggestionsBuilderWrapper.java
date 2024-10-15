@@ -5,6 +5,7 @@ import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.Arrays;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
@@ -37,6 +38,20 @@ public class SuggestionsBuilderWrapper {
     @CanIgnoreReturnValue
     public SuggestionsBuilderWrapper suggest(@NotNull String suggestion) {
         builder.suggest(suggestion);
+        return this;
+    }
+
+    /**
+     * Adds multiple suggestions to the list of completions.
+     *
+     * @param suggestions the suggestions to be added. This should not be null.
+     * @return this instance for method chaining.
+     */
+    @NotNull
+    @CanIgnoreReturnValue
+    public SuggestionsBuilderWrapper suggest(@NotNull String... suggestions) {
+        Arrays.stream(suggestions)
+                .forEach(builder::suggest);
         return this;
     }
 
@@ -82,6 +97,17 @@ public class SuggestionsBuilderWrapper {
                         tooltip -> builder.suggest(suggestion.text(), tooltip),
                         () -> builder.suggest(suggestion.text()));
         return this;
+    }
+
+    /**
+     * Returns an {@link CompletableFuture} containing an empty {@link Suggestions}.
+     *
+     * @return an {@link CompletableFuture} containing an empty {@link Suggestions}
+     */
+    @NotNull
+    @CanIgnoreReturnValue
+    public CompletableFuture<Suggestions> empty() {
+        return Suggestions.empty();
     }
 
     /**
