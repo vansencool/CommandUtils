@@ -34,9 +34,6 @@ dependencies {
 </dependency>
 ```
 
-# How does this work?
-![wrap](https://i.imgur.com/LunZr4t.png)
-
 # How to use it?
 First off, you'll need to give CommandAPI an instance of your lifecycle event, either your plugin
 ```java
