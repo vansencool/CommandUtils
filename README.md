@@ -38,4 +38,20 @@ dependencies {
 ![wrap](https://i.imgur.com/LunZr4t.png)
 
 # How to use it?
-You can visit https://vansen.gitbook.io/commandutils/ on how to use it!
+First off, you'll need to give CommandAPI an instance of your lifecycle event, either your plugin
+```java
+package com.example.myplugin;
+
+import dev.vansen.commandutils.api.CommandAPI;
+import org.bukkit.plugin.java.JavaPlugin;
+
+public final class MyPlugin extends JavaPlugin {
+
+    @Override
+    public void onEnable() {
+        CommandAPI.set(this);
+        // CommandAPI.set(this.getLifecycleManager());
+    }
+}
+```
+After you've done that, you can visit https://vansen.gitbook.io/commandutils/ on how to use it!
