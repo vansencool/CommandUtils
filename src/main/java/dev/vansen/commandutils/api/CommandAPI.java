@@ -13,7 +13,7 @@ import org.jetbrains.annotations.NotNull;
  * </p>
  */
 @SuppressWarnings({"unused", "UnstableApiUsage"})
-public class CommandAPI {
+public final class CommandAPI {
     private static LifecycleEventManager<@NotNull Plugin> event;
 
     /**

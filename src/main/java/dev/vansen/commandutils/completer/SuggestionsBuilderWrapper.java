@@ -15,7 +15,7 @@ import java.util.concurrent.CompletableFuture;
  * This class provides methods to add suggestions and build the completion results.
  */
 @SuppressWarnings("unused")
-public class SuggestionsBuilderWrapper {
+public final class SuggestionsBuilderWrapper {
 
     private final @NotNull SuggestionsBuilder builder;
 

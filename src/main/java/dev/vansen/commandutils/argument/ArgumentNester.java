@@ -11,7 +11,7 @@ import java.util.List;
  * Utility class for nesting arguments into a command.
  */
 @SuppressWarnings({"unused", "UnstableApiUsage"})
-public class ArgumentNester {
+public final class ArgumentNester {
 
     /**
      * Recursively nest arguments into the command.

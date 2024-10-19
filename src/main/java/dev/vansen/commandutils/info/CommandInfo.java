@@ -12,7 +12,7 @@ import java.util.List;
  * This class is used to configure and retrieve metadata about commands.
  */
 @SuppressWarnings("unused")
-public class CommandInfo {
+public final class CommandInfo {
     private @Nullable String description;
     private @Nullable List<String> aliases;
     private @Nullable CommandPermission permission;

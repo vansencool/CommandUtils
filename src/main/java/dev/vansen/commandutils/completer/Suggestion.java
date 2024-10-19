@@ -6,7 +6,7 @@ import org.jetbrains.annotations.NotNull;
  * Represents a suggestion with text and optional tooltip information.
  */
 @SuppressWarnings("unused")
-public class Suggestion {
+public final class Suggestion {
 
     /**
      * The text of the suggestion.

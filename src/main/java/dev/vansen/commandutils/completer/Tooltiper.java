@@ -10,7 +10,7 @@ import org.jetbrains.annotations.NotNull;
  * This class is used to display additional information for a command suggestion.
  */
 @SuppressWarnings("unused")
-public class Tooltiper implements Message {
+public final class Tooltiper implements Message {
 
     /**
      * The tooltip text to be displayed.

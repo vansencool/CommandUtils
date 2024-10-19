@@ -11,7 +11,7 @@ import org.jetbrains.annotations.Nullable;
  * This class extends {@link CommandException} and is used to send a custom error message
  * to a {@link CommandSender}.
  */
-public class CmdException extends CommandException {
+public final class CmdException extends CommandException {
 
     /**
      * The sender of the command to which the exception message will be sent.

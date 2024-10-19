@@ -8,7 +8,7 @@ import org.jetbrains.annotations.Nullable;
  * Command permissions determine what actions a user can perform based on their permissions or OP level.
  */
 @SuppressWarnings("unused")
-public class CommandPermission {
+public final class CommandPermission {
 
     /**
      * A predefined {@link CommandPermission} representing operator (OP) permissions.

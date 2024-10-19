@@ -5,9 +5,12 @@ import com.mojang.brigadier.arguments.ArgumentType;
 import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import dev.vansen.commandutils.command.CommandExecutor;
 import dev.vansen.commandutils.command.CommandWrapper;
+import dev.vansen.commandutils.command.ExecutableSender;
 import dev.vansen.commandutils.completer.CompletionHandler;
 import dev.vansen.commandutils.completer.SuggestionsBuilderWrapper;
 import dev.vansen.commandutils.exceptions.CmdException;
+import dev.vansen.commandutils.messages.SystemMessages;
+import dev.vansen.commandutils.sender.SenderTypes;
 import dev.vansen.commandutils.subcommand.SubCommand;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 import org.bukkit.command.BlockCommandSender;
@@ -19,14 +22,16 @@ import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Represents a command argument in the command system.
  * Arguments are individual command branches with their own execution logic and other things.
  */
 @SuppressWarnings({"unused", "UnstableApiUsage"})
-public class CommandArgument {
+public final class CommandArgument {
     private final RequiredArgumentBuilder<CommandSourceStack, ?> argument;
     private final List<RequiredArgumentBuilder<CommandSourceStack, ?>> argumentStack = new ArrayList<>();
     private CommandExecutor defaultExecutor;
@@ -35,6 +40,7 @@ public class CommandArgument {
     private CommandExecutor entityExecutor;
     private CommandExecutor blockExecutor;
     private CommandExecutor proxiedExecutor;
+    private SenderTypes[] senderTypes = null;
 
     /**
      * Constructs a new command argument with the specified Argument.
@@ -126,7 +132,7 @@ public class CommandArgument {
         return new CommandArgument(name, type);
     }
 
-    protected void execute() {
+    private void execute() {
         argument.executes(context -> {
             CommandSender sender = context.getSource().getSender();
             CommandWrapper wrapped = new CommandWrapper(context);
@@ -141,9 +147,22 @@ public class CommandArgument {
                             blockExecutor.execute(wrapped);
                     case ProxiedCommandSender proxiedCommandSender when proxiedExecutor != null ->
                             proxiedExecutor.execute(wrapped);
-                    default -> {
-                        if (defaultExecutor != null) defaultExecutor.execute(wrapped);
-                    }
+                    default -> Optional.ofNullable(defaultExecutor)
+                            .ifPresent(executor -> {
+                                if (senderTypes == null) executor.execute(wrapped);
+                                else if (Arrays.stream(senderTypes)
+                                        .anyMatch(type -> type == wrapped.senderType())) executor.execute(wrapped);
+                                else {
+                                    switch (wrapped.senderType()) {
+                                        case PLAYER -> wrapped.response(SystemMessages.NOT_ALLOWED_PLAYER);
+                                        case CONSOLE -> wrapped.response(SystemMessages.NOT_ALLOWED_CONSOLE);
+                                        case ENTITY -> wrapped.response(SystemMessages.NOT_ALLOWED_ENTITY);
+                                        case COMMAND_BLOCK ->
+                                                wrapped.response(SystemMessages.NOT_ALLOWED_COMMAND_BLOCK);
+                                        case PROXIED -> wrapped.response(SystemMessages.NOT_ALLOWED_PROXIED_SENDER);
+                                    }
+                                }
+                            });
                 }
                 return 1;
             } catch (CmdException e) {
@@ -153,7 +172,7 @@ public class CommandArgument {
         });
     }
 
-    protected void executeIf() {
+    private void executeIf() {
         if (defaultExecutor != null || playerExecutor != null || consoleExecutor != null || blockExecutor != null || proxiedExecutor != null) {
             execute();
         }
@@ -161,7 +180,7 @@ public class CommandArgument {
 
     /**
      * Sets the default executor for the argument, which is called when the argument
-     * is executed without any arguments or when no other execution path is matched.
+     * is executed without any other arguments/subcommands or when no other execution path is matched.
      *
      * @param executor the {@link CommandExecutor} to be executed by default.
      * @return this {@link CommandArgument} instance for chaining.
@@ -170,6 +189,23 @@ public class CommandArgument {
     @CanIgnoreReturnValue
     public CommandArgument defaultExecute(@NotNull CommandExecutor executor) {
         defaultExecutor = executor;
+        return this;
+    }
+
+    /**
+     * Sets the default executor for the argument, which is called when the argument
+     * is executed without any other arguments/subcommands or when no other execution path is matched.
+     * If the command sender is not in the sender types, the executor is not called either.
+     *
+     * @param executor    the {@link CommandExecutor} to be executed by default.
+     * @param senderTypes the {@link SenderTypes} of the sender.
+     * @return this {@link CommandArgument} instance for chaining.
+     */
+    @NotNull
+    @CanIgnoreReturnValue
+    public CommandArgument defaultExecute(@NotNull CommandExecutor executor, @NotNull ExecutableSender senderTypes) {
+        defaultExecutor = executor;
+        this.senderTypes = senderTypes.types();
         return this;
     }
 

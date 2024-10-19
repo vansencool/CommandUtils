@@ -2,6 +2,7 @@ package dev.vansen.commandutils.command;
 
 import com.mojang.brigadier.context.CommandContext;
 import dev.vansen.commandutils.exceptions.CmdException;
+import dev.vansen.commandutils.messages.SystemMessages;
 import dev.vansen.commandutils.sender.SenderTypes;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 import net.kyori.adventure.text.Component;
@@ -20,6 +21,8 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Arrays;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.function.Predicate;
 
 /**
@@ -127,7 +130,8 @@ public record CommandWrapper(CommandContext<CommandSourceStack> context) {
      *
      * @param message the message to send
      */
-    public void response(@NotNull String message) {
+    public void response(@Nullable String message) {
+        if (message == null) return;
         sender().sendRichMessage(message);
     }
 
@@ -136,7 +140,8 @@ public record CommandWrapper(CommandContext<CommandSourceStack> context) {
      *
      * @param message the message to send
      */
-    public void response(@NotNull Component message) {
+    public void response(@Nullable Component message) {
+        if (message == null) return;
         sender().sendMessage(message);
     }
 
@@ -145,8 +150,9 @@ public record CommandWrapper(CommandContext<CommandSourceStack> context) {
      *
      * @param messages the messages to send
      */
-    public void response(@NotNull String... messages) {
+    public void response(@Nullable String... messages) {
         Arrays.stream(messages)
+                .filter(Objects::nonNull)
                 .forEach(message -> sender().sendRichMessage(message));
     }
 
@@ -155,8 +161,9 @@ public record CommandWrapper(CommandContext<CommandSourceStack> context) {
      *
      * @param messages the messages to send
      */
-    public void response(@NotNull Component... messages) {
+    public void response(@Nullable Component... messages) {
         Arrays.stream(messages)
+                .filter(Objects::nonNull)
                 .forEach(message -> sender().sendMessage(message));
     }
 
@@ -208,12 +215,41 @@ public record CommandWrapper(CommandContext<CommandSourceStack> context) {
     }
 
     /**
+     * Helper method to get arguments after a given index.
+     * Automatically parses the input to get the arguments in the command.
+     *
+     * @param index The index of the argument to start retrieving from (0-based), 0 is being the command itself (i.e. /example).
+     * @return A string containing the arguments after the given index, separated by spaces.
+     */
+    public String argsAfter(int index) {
+        String[] args = input().split(" ");
+        if (index < args.length) {
+            return String.join(" ", Arrays.copyOfRange(args, index + 1, args.length));
+        }
+        return ""; // Return empty if the argument does not exist
+    }
+
+    /**
      * Helper method to get the number of arguments.
      *
      * @return The number of arguments in the command.
      */
     public int argCount() {
         return input().split(" ").length;
+    }
+
+    /**
+     * Helper method to get the number of arguments after a given index.
+     *
+     * @param index The index of the argument to start retrieving from (0-based), 0 is being the command itself (i.e. /example).
+     * @return The number of arguments after the given index.
+     */
+    public int argCountAfter(int index) {
+        String[] args = input().split(" ");
+        if (index < args.length) {
+            return args.length - index - 1;
+        }
+        return 0;
     }
 
     /**
@@ -432,7 +468,7 @@ public record CommandWrapper(CommandContext<CommandSourceStack> context) {
      * @return the plain sender type, can be "player", "console", "entity", "command_block", "proxied_sender" or "unknown".
      */
     public String plainSender() {
-        return switch (senderType(sender())) {
+        return switch (senderType()) {
             case PLAYER -> "player";
             case CONSOLE -> "console";
             case ENTITY -> "entity";
@@ -448,7 +484,7 @@ public record CommandWrapper(CommandContext<CommandSourceStack> context) {
      * @return the friendly sender type, can be "Player", "Console", "Entity", "Command Block", "Proxied Command Sender" or "Unknown".
      */
     public String friendlySender() {
-        return switch (senderType(sender())) {
+        return switch (senderType()) {
             case PLAYER -> "Player";
             case CONSOLE -> "Console";
             case ENTITY -> "Entity";
@@ -464,7 +500,7 @@ public record CommandWrapper(CommandContext<CommandSourceStack> context) {
      * @return true if the sender is a player, false otherwise.
      */
     public boolean isPlayer() {
-        return senderType(sender()) == SenderTypes.PLAYER;
+        return senderType() == SenderTypes.PLAYER;
     }
 
     /**
@@ -473,7 +509,7 @@ public record CommandWrapper(CommandContext<CommandSourceStack> context) {
      * @return true if the sender is the console, false otherwise.
      */
     public boolean isConsole() {
-        return senderType(sender()) == SenderTypes.CONSOLE;
+        return senderType() == SenderTypes.CONSOLE;
     }
 
     /**
@@ -482,7 +518,7 @@ public record CommandWrapper(CommandContext<CommandSourceStack> context) {
      * @return true if the sender is an entity, false otherwise.
      */
     public boolean isEntity() {
-        return senderType(sender()) == SenderTypes.ENTITY;
+        return senderType() == SenderTypes.ENTITY;
     }
 
     /**
@@ -491,7 +527,7 @@ public record CommandWrapper(CommandContext<CommandSourceStack> context) {
      * @return true if the sender is a command block, false otherwise.
      */
     public boolean isBlock() {
-        return senderType(sender()) == SenderTypes.COMMAND_BLOCK;
+        return senderType() == SenderTypes.COMMAND_BLOCK;
     }
 
     /**
@@ -500,31 +536,111 @@ public record CommandWrapper(CommandContext<CommandSourceStack> context) {
      * @return true if the sender is a proxied command sender, false otherwise.
      */
     public boolean isProxied() {
-        return senderType(sender()) == SenderTypes.PROXIED;
+        return senderType() == SenderTypes.PROXIED;
     }
 
     /**
-     * Retrieves the sender type of the given sender.
+     * Retrieves the sender type of the command sender.
      *
      * @return the sender type.
      */
-    public SenderTypes senderType(Object sender) {
-        if (sender instanceof Player) {
+    public SenderTypes senderType() {
+        if (sender() instanceof Player) {
             return SenderTypes.PLAYER;
         }
-        if (sender instanceof ConsoleCommandSender) {
+        if (sender() instanceof ConsoleCommandSender) {
             return SenderTypes.CONSOLE;
         }
-        if (sender instanceof Entity) {
+        if (sender() instanceof Entity) {
             return SenderTypes.ENTITY;
         }
-        if (sender instanceof BlockCommandSender) {
+        if (sender() instanceof BlockCommandSender) {
             return SenderTypes.COMMAND_BLOCK;
         }
-        if (sender instanceof ProxiedCommandSender) {
+        if (sender() instanceof ProxiedCommandSender) {
             return SenderTypes.PROXIED;
         }
         return SenderTypes.UNKNOWN;
+    }
+
+    /**
+     * Throws a {@link CmdException} with the given message if the given predicate is true.
+     *
+     * @param predicate the predicate to evaluate
+     * @param message   the message to include in the exception
+     * @throws CmdException if the predicate is true
+     */
+    public void throwIf(@NotNull Predicate<CommandWrapper> predicate, @NotNull String message) {
+        if (predicate.test(this)) {
+            throw new CmdException(message, sender());
+        }
+    }
+
+    /**
+     * Throws a {@link CmdException} with the given message if the given predicate is false.
+     *
+     * @param predicate the predicate to evaluate
+     * @param message   the message to include in the exception
+     * @throws CmdException if the predicate is false
+     */
+    public void throwIfNot(@NotNull Predicate<CommandWrapper> predicate, @NotNull String message) {
+        if (!predicate.test(this)) {
+            throw new CmdException(message, sender());
+        }
+    }
+
+    /**
+     * Throws a {@link CmdException} with the given component message if the given predicate is true.
+     *
+     * @param predicate the predicate to evaluate
+     * @param message   the component message to include in the exception
+     * @throws CmdException if the predicate is true
+     */
+    public void throwIf(@NotNull Predicate<CommandWrapper> predicate, @NotNull Component message) {
+        if (predicate.test(this)) {
+            throw new CmdException(message, sender());
+        }
+    }
+
+    /**
+     * Throws a {@link CmdException} with the given component message if the given predicate is false.
+     *
+     * @param predicate the predicate to evaluate
+     * @param message   the component message to include in the exception
+     * @throws CmdException if the predicate is false
+     */
+    public void throwIfNot(@NotNull Predicate<CommandWrapper> predicate, @NotNull Component message) {
+        if (!predicate.test(this)) {
+            throw new CmdException(message, sender());
+        }
+    }
+
+    /**
+     * Throws a {@link CmdException} with the given runnable if the given predicate is true.
+     *
+     * @param predicate the predicate to evaluate
+     * @param runnable  the runnable to run if the predicate is true
+     * @throws CmdException if the predicate is true
+     */
+    public void throwAndRunIf(@NotNull Predicate<CommandWrapper> predicate, @NotNull Runnable runnable) {
+        if (predicate.test(this)) {
+            runnable.run();
+            check(c -> false);
+        }
+    }
+
+    /**
+     * Throws a {@link CmdException} with the given runnable if the given predicate is false.
+     *
+     * @param predicate the predicate to evaluate
+     * @param runnable  the runnable to run if the predicate is false
+     * @throws CmdException if the predicate is false
+     */
+    public void throwAndRunIfNot(@NotNull Predicate<CommandWrapper> predicate, @NotNull Runnable runnable) {
+        if (!predicate.test(this)) {
+            runnable.run();
+            check(c -> false);
+        }
     }
 
     /**
@@ -538,26 +654,78 @@ public record CommandWrapper(CommandContext<CommandSourceStack> context) {
     }
 
     /**
+     * Runs the given runnable if the given predicate is true.
+     *
+     * @param predicate the predicate to evaluate
+     * @param runnable  the runnable to run if the predicate is true
+     */
+    public void runIf(@NotNull Predicate<CommandWrapper> predicate, @NotNull Runnable runnable) {
+        if (predicate.test(this)) {
+            runnable.run();
+        }
+    }
+
+    /**
+     * Runs the given runnable if the given predicate is false.
+     *
+     * @param predicate the predicate to evaluate
+     * @param runnable  the runnable to run if the predicate is false
+     */
+    public void runIfNot(@NotNull Predicate<CommandWrapper> predicate, @NotNull Runnable runnable) {
+        if (!predicate.test(this)) {
+            runnable.run();
+        }
+    }
+
+    /**
      * Checks whether the command sender meets the specified condition.
      *
      * @param type the type of check to be performed.
      * @throws CmdException if the check fails.
      */
     public void check(@NotNull CheckType type) {
-        if (type == CheckType.PLAYER && !(sender() instanceof Player)) {
-            throw new CmdException("<color:#ff4060>Exception: You must be a player to execute this command!</color>", sender());
-        }
-        if (type == CheckType.CONSOLE && !(sender() instanceof ConsoleCommandSender)) {
-            throw new CmdException("<color:#ff4060>Exception: You must execute this command from the console!</color>", sender());
-        }
-        if (type == CheckType.ENTITY && !(sender() instanceof Entity)) {
-            throw new CmdException("<color:#ff4060>Exception: You must be an entity to execute this command!</color>", sender());
-        }
-        if (type == CheckType.COMMAND_BLOCK && !(sender() instanceof BlockCommandSender)) {
-            throw new CmdException("<color:#ff4060>Exception: This can only be executed by a command block!</color>", sender());
-        }
-        if (type == CheckType.PROXIED_SENDER && !(sender() instanceof ProxiedCommandSender)) {
-            throw new CmdException("<color:#ff4060>Exception: You must be a proxied command sender to execute this command!</color>", sender());
+        Optional.of(type)
+                .filter(t -> t == CheckType.PLAYER && !isPlayer())
+                .ifPresent(t -> {
+                    throw new CmdException(SystemMessages.PLAYER_EXCEPTION, sender());
+                });
+        Optional.of(type)
+                .filter(t -> t == CheckType.CONSOLE && !isConsole())
+                .ifPresent(t -> {
+                    throw new CmdException(SystemMessages.CONSOLE_EXCEPTION, sender());
+                });
+        Optional.of(type)
+                .filter(t -> t == CheckType.ENTITY && !isEntity())
+                .ifPresent(t -> {
+                    throw new CmdException(SystemMessages.ENTITY_EXCEPTION, sender());
+                });
+        Optional.of(type)
+                .filter(t -> t == CheckType.COMMAND_BLOCK && !isBlock())
+                .ifPresent(t -> {
+                    throw new CmdException(SystemMessages.COMMAND_BLOCK_EXCEPTION, sender());
+                });
+        Optional.of(type)
+                .filter(t -> t == CheckType.PROXIED_SENDER && !isProxied())
+                .ifPresent(t -> {
+                    throw new CmdException(SystemMessages.PROXIED_SENDER_EXCEPTION, sender());
+                });
+    }
+
+    /**
+     * Checks whether the command sender meets the specified condition and runs the given runnable if not.
+     *
+     * @param type the type of check to be performed.
+     * @param task the runnable to run if the check fails.
+     * @throws CmdException if the check fails.
+     */
+    public void check(@NotNull CheckType type, @NotNull Runnable task) {
+        if (!(type == CheckType.PLAYER && isPlayer() ||
+                type == CheckType.CONSOLE && isConsole() ||
+                type == CheckType.ENTITY && isEntity() ||
+                type == CheckType.COMMAND_BLOCK && isBlock() ||
+                type == CheckType.PROXIED_SENDER && isProxied())) {
+            task.run();
+            check(c -> false);
         }
     }
 
@@ -569,21 +737,31 @@ public record CommandWrapper(CommandContext<CommandSourceStack> context) {
      * @throws CmdException if the check fails.
      */
     public void check(@NotNull CheckType type, @NotNull String message) {
-        if (type == CheckType.PLAYER && !(sender() instanceof Player)) {
-            throw new CmdException(message, sender());
-        }
-        if (type == CheckType.CONSOLE && sender() instanceof Player) {
-            throw new CmdException(message, sender());
-        }
-        if (type == CheckType.ENTITY && !(sender() instanceof Entity)) {
-            throw new CmdException(message, sender());
-        }
-        if (type == CheckType.COMMAND_BLOCK && !(sender() instanceof BlockCommandSender)) {
-            throw new CmdException(message, sender());
-        }
-        if (type == CheckType.PROXIED_SENDER && !(sender() instanceof ProxiedCommandSender)) {
-            throw new CmdException(message, sender());
-        }
+        Optional.of(type)
+                .filter(t -> t == CheckType.PLAYER && !isPlayer())
+                .ifPresent(t -> {
+                    throw new CmdException(message, sender());
+                });
+        Optional.of(type)
+                .filter(t -> t == CheckType.CONSOLE && !isConsole())
+                .ifPresent(t -> {
+                    throw new CmdException(message, sender());
+                });
+        Optional.of(type)
+                .filter(t -> t == CheckType.ENTITY && !isEntity())
+                .ifPresent(t -> {
+                    throw new CmdException(message, sender());
+                });
+        Optional.of(type)
+                .filter(t -> t == CheckType.COMMAND_BLOCK && !isBlock())
+                .ifPresent(t -> {
+                    throw new CmdException(message, sender());
+                });
+        Optional.of(type)
+                .filter(t -> t == CheckType.PROXIED_SENDER && !isProxied())
+                .ifPresent(t -> {
+                    throw new CmdException(message, sender());
+                });
     }
 
     /**
@@ -625,6 +803,51 @@ public record CommandWrapper(CommandContext<CommandSourceStack> context) {
         if (!check.test(this)) {
             throw new CmdException(message, sender());
         }
+    }
+
+    /**
+     * Adds a custom check to the command.
+     * If the check fails, the specified task is executed.
+     *
+     * @param check the custom check to add
+     * @param task  the task to execute if the check fails
+     */
+    public void check(@NotNull Predicate<CommandWrapper> check, @NotNull Runnable task) {
+        if (!check.test(this)) {
+            task.run();
+            check(c -> false);
+        }
+    }
+
+    /**
+     * Checks whether the command sender is of the specified type.
+     *
+     * @param type the type of sender to check
+     * @return true if the command sender is of the specified type, false otherwise
+     */
+    public boolean canExecute(@NotNull SenderTypes type) {
+        return senderType() == type;
+    }
+
+    /**
+     * Checks whether the command sender is of the specified types.
+     *
+     * @param types the types of sender to check
+     * @return true if the command sender is of the specified types, false otherwise
+     */
+    public boolean canExecute(@NotNull SenderTypes... types) {
+        return Arrays.stream(types)
+                .anyMatch(this::canExecute);
+    }
+
+    /**
+     * Checks whether the command sender is of the specified types.
+     *
+     * @param types the types of sender to check
+     * @return true if the command sender is of the specified types, false otherwise
+     */
+    public boolean canExecute(@NotNull ExecutableSender types) {
+        return canExecute(types.types());
     }
 
     /**

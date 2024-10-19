@@ -8,9 +8,13 @@ import dev.vansen.commandutils.argument.ArgumentPosition;
 import dev.vansen.commandutils.argument.CommandArgument;
 import dev.vansen.commandutils.command.CommandExecutor;
 import dev.vansen.commandutils.command.CommandWrapper;
+import dev.vansen.commandutils.command.ExecutableSender;
 import dev.vansen.commandutils.completer.CompletionHandler;
 import dev.vansen.commandutils.completer.SuggestionsBuilderWrapper;
 import dev.vansen.commandutils.exceptions.CmdException;
+import dev.vansen.commandutils.messages.SystemMessages;
+import dev.vansen.commandutils.permission.CommandPermission;
+import dev.vansen.commandutils.sender.SenderTypes;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 import org.bukkit.command.BlockCommandSender;
 import org.bukkit.command.CommandSender;
@@ -21,14 +25,16 @@ import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Represents a subcommand in the command system.
  * Subcommands are individual command branches with their own execution logic and arguments.
  */
 @SuppressWarnings({"unused", "UnstableApiUsage"})
-public class SubCommand {
+public final class SubCommand {
 
     private final LiteralArgumentBuilder<CommandSourceStack> builder;
     private final List<RequiredArgumentBuilder<CommandSourceStack, ?>> argumentStack = new ArrayList<>();
@@ -38,6 +44,7 @@ public class SubCommand {
     private CommandExecutor entityExecutor;
     private CommandExecutor blockExecutor;
     private CommandExecutor proxiedExecutor;
+    private SenderTypes[] senderTypes = null;
 
     /**
      * Constructs a new subcommand with the specified name.
@@ -59,7 +66,7 @@ public class SubCommand {
         return new SubCommand(name);
     }
 
-    protected void execute() {
+    private void execute() {
         builder.executes(context -> {
             CommandSender sender = context.getSource().getSender();
             CommandWrapper wrapped = new CommandWrapper(context);
@@ -74,9 +81,22 @@ public class SubCommand {
                             blockExecutor.execute(wrapped);
                     case ProxiedCommandSender proxiedCommandSender when proxiedExecutor != null ->
                             proxiedExecutor.execute(wrapped);
-                    default -> {
-                        if (defaultExecutor != null) defaultExecutor.execute(wrapped);
-                    }
+                    default -> Optional.ofNullable(defaultExecutor)
+                            .ifPresent(executor -> {
+                                if (senderTypes == null) executor.execute(wrapped);
+                                else if (Arrays.stream(senderTypes)
+                                        .anyMatch(type -> type == wrapped.senderType())) executor.execute(wrapped);
+                                else {
+                                    switch (wrapped.senderType()) {
+                                        case PLAYER -> wrapped.response(SystemMessages.NOT_ALLOWED_PLAYER);
+                                        case CONSOLE -> wrapped.response(SystemMessages.NOT_ALLOWED_CONSOLE);
+                                        case ENTITY -> wrapped.response(SystemMessages.NOT_ALLOWED_ENTITY);
+                                        case COMMAND_BLOCK ->
+                                                wrapped.response(SystemMessages.NOT_ALLOWED_COMMAND_BLOCK);
+                                        case PROXIED -> wrapped.response(SystemMessages.NOT_ALLOWED_PROXIED_SENDER);
+                                    }
+                                }
+                            });
                 }
                 return 1;
             } catch (CmdException e) {
@@ -86,15 +106,16 @@ public class SubCommand {
         });
     }
 
-    protected void executeIf() {
+    // internal
+    private void executeIf() {
         if (defaultExecutor != null || playerExecutor != null || consoleExecutor != null || blockExecutor != null || proxiedExecutor != null) {
             execute();
         }
     }
 
     /**
-     * Sets the default executor for the command, which is called when the command
-     * is executed without any arguments or when no other execution path is matched.
+     * Sets the default executor for the command, which is called when the subcommand
+     * is executed without any arguments/other subcommands or when no other execution path is matched.
      *
      * @param executor the {@link CommandExecutor} to be executed by default.
      * @return this {@link SubCommand} instance for chaining.
@@ -103,6 +124,23 @@ public class SubCommand {
     @CanIgnoreReturnValue
     public SubCommand defaultExecute(@NotNull CommandExecutor executor) {
         defaultExecutor = executor;
+        return this;
+    }
+
+    /**
+     * Sets the default executor for the command, which is called when the subcommand
+     * is executed without any arguments/other subcommands or when no other execution path is matched.
+     * If the command sender is not in the sender types, the executor is not called either.
+     *
+     * @param executor    the {@link CommandExecutor} to be executed by default.
+     * @param senderTypes the {@link SenderTypes} of the sender.
+     * @return this {@link SubCommand} instance for chaining.
+     */
+    @NotNull
+    @CanIgnoreReturnValue
+    public SubCommand defaultExecute(@NotNull CommandExecutor executor, @NotNull ExecutableSender senderTypes) {
+        defaultExecutor = executor;
+        this.senderTypes = senderTypes.types();
         return this;
     }
 
@@ -264,6 +302,23 @@ public class SubCommand {
                     SuggestionsBuilderWrapper wrapper = new SuggestionsBuilderWrapper(builder);
                     return handler.complete(wrapped, wrapper);
                 });
+        return this;
+    }
+
+    /**
+     * Adds a permission requirement to the subcommand.
+     *
+     * @param permission the {@link CommandPermission} to be added.
+     * @return this {@link SubCommand} instance for chaining.
+     */
+    @NotNull
+    @CanIgnoreReturnValue
+    public SubCommand permission(@NotNull CommandPermission permission) {
+        if (permission.isOpPermission()) {
+            builder.requires(consumer -> consumer.getSender().isOp());
+        } else if (permission.getPermission() != null) {
+            builder.requires(consumer -> consumer.getSender().hasPermission(permission.getPermission()));
+        }
         return this;
     }
 
