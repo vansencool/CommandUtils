@@ -21,9 +21,9 @@ public final class CommandPermission {
      * Constructs a {@link CommandPermission} with a specific permission string.
      * This type of permission is typically used for more granular control over command access.
      *
-     * @param permission the permission string required to execute the command, or {@code null} if not applicable.
+     * @param permission the permission string required to execute the command.
      */
-    public CommandPermission(@Nullable String permission) {
+    public CommandPermission(@NotNull String permission) {
         this.permission = permission;
         this.opLevel = -1;
     }

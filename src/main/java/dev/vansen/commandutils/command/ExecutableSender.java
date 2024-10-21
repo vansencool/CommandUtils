@@ -29,7 +29,7 @@ public final class ExecutableSender {
      */
     @NotNull
     @CanIgnoreReturnValue
-    public static ExecutableSender type(@NotNull SenderTypes... types) {
+    public static ExecutableSender types(@NotNull SenderTypes... types) {
         return new ExecutableSender(types);
     }
 
@@ -41,7 +41,7 @@ public final class ExecutableSender {
      */
     @NotNull
     @CanIgnoreReturnValue
-    public static ExecutableSender type(@NotNull List<SenderTypes> types) {
+    public static ExecutableSender types(@NotNull List<SenderTypes> types) {
         return new ExecutableSender(types.toArray(new SenderTypes[0]));
     }
 

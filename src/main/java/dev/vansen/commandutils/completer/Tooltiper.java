@@ -31,16 +31,6 @@ public final class Tooltiper implements Message {
     }
 
     /**
-     * Returns the tooltip text as a string.
-     *
-     * @return the tooltip text.
-     */
-    @Override
-    public @NotNull String getString() {
-        return tooltip;
-    }
-
-    /**
      * Creates a new {@link Tooltiper} instance with the specified tooltip text.
      *
      * @param tooltip the text to be used as the tooltip. This should not be null.
@@ -58,5 +48,15 @@ public final class Tooltiper implements Message {
      */
     public static @NotNull Tooltiper of(@NotNull Component tooltip) {
         return new Tooltiper(tooltip);
+    }
+
+    /**
+     * Returns the tooltip text as a string.
+     *
+     * @return the tooltip text.
+     */
+    @Override
+    public @NotNull String getString() {
+        return tooltip;
     }
 }

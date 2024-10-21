@@ -2,7 +2,7 @@ package dev.vansen.commandutils.command;
 
 import com.mojang.brigadier.context.CommandContext;
 import dev.vansen.commandutils.exceptions.CmdException;
-import dev.vansen.commandutils.messages.SystemMessages;
+import dev.vansen.commandutils.messages.MessageTypes;
 import dev.vansen.commandutils.sender.SenderTypes;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 import net.kyori.adventure.text.Component;
@@ -168,6 +168,16 @@ public record CommandWrapper(CommandContext<CommandSourceStack> context) {
     }
 
     /**
+     * Sends a response to the command sender as a message type.
+     *
+     * @param message the message to send
+     */
+    public void response(@Nullable MessageTypes message) {
+        if (message == null) return;
+        sender().sendMessage(message.message());
+    }
+
+    /**
      * Retrieves a command argument by its name and converts it to the specified type.
      *
      * @param arg   the name of the argument.
@@ -329,7 +339,7 @@ public record CommandWrapper(CommandContext<CommandSourceStack> context) {
      * @return the argument value converted to a game mode.
      */
     public GameMode argGameMode(@NotNull String arg) {
-        return GameMode.valueOf(arg.toUpperCase());
+        return arg(arg, GameMode.class);
     }
 
     /**
@@ -687,27 +697,27 @@ public record CommandWrapper(CommandContext<CommandSourceStack> context) {
         Optional.of(type)
                 .filter(t -> t == CheckType.PLAYER && !isPlayer())
                 .ifPresent(t -> {
-                    throw new CmdException(SystemMessages.PLAYER_EXCEPTION, sender());
+                    throw new CmdException(MessageTypes.PLAYER_EXCEPTION, sender());
                 });
         Optional.of(type)
                 .filter(t -> t == CheckType.CONSOLE && !isConsole())
                 .ifPresent(t -> {
-                    throw new CmdException(SystemMessages.CONSOLE_EXCEPTION, sender());
+                    throw new CmdException(MessageTypes.CONSOLE_EXCEPTION, sender());
                 });
         Optional.of(type)
                 .filter(t -> t == CheckType.ENTITY && !isEntity())
                 .ifPresent(t -> {
-                    throw new CmdException(SystemMessages.ENTITY_EXCEPTION, sender());
+                    throw new CmdException(MessageTypes.ENTITY_EXCEPTION, sender());
                 });
         Optional.of(type)
                 .filter(t -> t == CheckType.COMMAND_BLOCK && !isBlock())
                 .ifPresent(t -> {
-                    throw new CmdException(SystemMessages.COMMAND_BLOCK_EXCEPTION, sender());
+                    throw new CmdException(MessageTypes.COMMAND_BLOCK_EXCEPTION, sender());
                 });
         Optional.of(type)
                 .filter(t -> t == CheckType.PROXIED_SENDER && !isProxied())
                 .ifPresent(t -> {
-                    throw new CmdException(SystemMessages.PROXIED_SENDER_EXCEPTION, sender());
+                    throw new CmdException(MessageTypes.PROXIED_SENDER_EXCEPTION, sender());
                 });
     }
 

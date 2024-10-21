@@ -17,10 +17,6 @@ public final class CommandInfo {
     private @Nullable List<String> aliases;
     private @Nullable CommandPermission permission;
 
-    // Private constructor
-    private CommandInfo() {
-    }
-
     /**
      * Creates a new {@link CommandInfo} instance.
      *

@@ -4,19 +4,21 @@ import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import dev.vansen.commandutils.api.CommandAPI;
+import dev.vansen.commandutils.argument.AbstractCommandArgument;
 import dev.vansen.commandutils.argument.ArgumentNester;
-import dev.vansen.commandutils.argument.ArgumentPosition;
 import dev.vansen.commandutils.argument.CommandArgument;
 import dev.vansen.commandutils.command.CommandExecutor;
 import dev.vansen.commandutils.command.CommandWrapper;
 import dev.vansen.commandutils.command.ExecutableSender;
+import dev.vansen.commandutils.command.Position;
 import dev.vansen.commandutils.completer.CompletionHandler;
 import dev.vansen.commandutils.completer.SuggestionsBuilderWrapper;
 import dev.vansen.commandutils.exceptions.CmdException;
 import dev.vansen.commandutils.info.CommandInfo;
-import dev.vansen.commandutils.messages.SystemMessages;
+import dev.vansen.commandutils.messages.MessageTypes;
 import dev.vansen.commandutils.permission.CommandPermission;
 import dev.vansen.commandutils.sender.SenderTypes;
+import dev.vansen.commandutils.subcommand.AbstractSubCommand;
 import dev.vansen.commandutils.subcommand.SubCommand;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 import io.papermc.paper.command.brigadier.Commands;
@@ -102,27 +104,35 @@ public final class CommandUtils {
                     case Player player when playerExecutor != null -> playerExecutor.execute(wrapped);
                     case ConsoleCommandSender consoleCommandSender when consoleExecutor != null ->
                             consoleExecutor.execute(wrapped);
-                    case Entity entity when entityExecutor != null -> entityExecutor.execute(wrapped);
                     case BlockCommandSender blockCommandSender when blockExecutor != null ->
                             blockExecutor.execute(wrapped);
-                    case ProxiedCommandSender proxiedCommandSender when proxiedExecutor != null ->
-                            proxiedExecutor.execute(wrapped);
-                    default -> Optional.ofNullable(defaultExecutor)
-                            .ifPresent(executor -> {
-                                if (senderTypes == null) executor.execute(wrapped);
-                                else if (Arrays.stream(senderTypes)
-                                        .anyMatch(type -> type == wrapped.senderType())) executor.execute(wrapped);
-                                else {
-                                    switch (wrapped.senderType()) {
-                                        case PLAYER -> wrapped.response(SystemMessages.NOT_ALLOWED_PLAYER);
-                                        case CONSOLE -> wrapped.response(SystemMessages.NOT_ALLOWED_CONSOLE);
-                                        case ENTITY -> wrapped.response(SystemMessages.NOT_ALLOWED_ENTITY);
-                                        case COMMAND_BLOCK ->
-                                                wrapped.response(SystemMessages.NOT_ALLOWED_COMMAND_BLOCK);
-                                        case PROXIED -> wrapped.response(SystemMessages.NOT_ALLOWED_PROXIED_SENDER);
-                                    }
-                                }
-                            });
+                    default -> {
+                        switch (context.getSource().getExecutor()) {
+                            case null -> {
+                            }
+                            case Entity entity when entityExecutor != null -> entityExecutor.execute(wrapped);
+                            case ProxiedCommandSender proxiedCommandSender when proxiedExecutor != null ->
+                                    proxiedExecutor.execute(wrapped);
+                            default -> Optional.ofNullable(defaultExecutor)
+                                    .ifPresent(executor -> {
+                                        if (senderTypes == null) executor.execute(wrapped);
+                                        else if (Arrays.stream(senderTypes)
+                                                .anyMatch(type -> type == wrapped.senderType()))
+                                            executor.execute(wrapped);
+                                        else {
+                                            switch (wrapped.senderType()) {
+                                                case PLAYER -> wrapped.response(MessageTypes.NOT_ALLOWED_PLAYER);
+                                                case CONSOLE -> wrapped.response(MessageTypes.NOT_ALLOWED_CONSOLE);
+                                                case ENTITY -> wrapped.response(MessageTypes.NOT_ALLOWED_ENTITY);
+                                                case COMMAND_BLOCK ->
+                                                        wrapped.response(MessageTypes.NOT_ALLOWED_COMMAND_BLOCK);
+                                                case PROXIED ->
+                                                        wrapped.response(MessageTypes.NOT_ALLOWED_PROXIED_SENDER);
+                                            }
+                                        }
+                                    });
+                        }
+                    }
                 }
                 return 1;
             } catch (CmdException e) {
@@ -254,6 +264,19 @@ public final class CommandUtils {
     }
 
     /**
+     * Adds an argument to the command.
+     *
+     * @param argument the {@link AbstractCommandArgument}
+     * @return this {@link CommandUtils} instance for chaining.
+     */
+    @NotNull
+    @CanIgnoreReturnValue
+    public CommandUtils argument(@NotNull AbstractCommandArgument argument) {
+        argumentStack.add(argument.build().get());
+        return this;
+    }
+
+    /**
      * Adds a completion handler to the last argument added to the command.
      *
      * @param handler the {@link CompletionHandler} completion handler for the argument.
@@ -279,15 +302,15 @@ public final class CommandUtils {
      */
     @NotNull
     @CanIgnoreReturnValue
-    public CommandUtils completion(@NotNull ArgumentPosition position, @NotNull CompletionHandler handler) {
+    public CommandUtils completion(@NotNull Position position, @NotNull CompletionHandler handler) {
         switch (position) {
-            case ArgumentPosition.FIRST -> argumentStack.getFirst()
+            case Position.FIRST -> argumentStack.getFirst()
                     .suggests((context, builder) -> {
                         CommandWrapper wrapped = new CommandWrapper(context);
                         SuggestionsBuilderWrapper wrapper = new SuggestionsBuilderWrapper(builder);
                         return handler.complete(wrapped, wrapper);
                     });
-            case ArgumentPosition.LAST -> argumentStack.getLast()
+            case Position.LAST -> argumentStack.getLast()
                     .suggests((context, builder) -> {
                         CommandWrapper wrapped = new CommandWrapper(context);
                         SuggestionsBuilderWrapper wrapper = new SuggestionsBuilderWrapper(builder);
@@ -327,6 +350,20 @@ public final class CommandUtils {
     @CanIgnoreReturnValue
     public CommandUtils subCommand(@NotNull SubCommand subCommand) {
         builder.then(subCommand.get());
+        return this;
+    }
+
+    /**
+     * Adds a subcommand to the main command.
+     * Subcommands are separate execution paths that have their own logic.
+     *
+     * @param subCommand the {@link AbstractSubCommand} to be added.
+     * @return this {@link CommandUtils} instance for chaining.
+     */
+    @NotNull
+    @CanIgnoreReturnValue
+    public CommandUtils subCommand(@NotNull AbstractSubCommand subCommand) {
+        builder.then(subCommand.build().get());
         return this;
     }
 
@@ -391,7 +428,7 @@ public final class CommandUtils {
     }
 
     /**
-     * Registers the command under that pluginmeta's name with the provided description and aliases.
+     * Registers the command under that plugin meta's name with the provided description and aliases.
      * This method should be used in most cases as it handles both namespaces and command registration fully.
      */
     public void build(@NotNull PluginMeta meta) {
@@ -460,7 +497,7 @@ public final class CommandUtils {
     }
 
     /**
-     * Registers the command under that pluginmeta's name with the provided description and aliases.
+     * Registers the command under that plugin meta's name with the provided description and aliases.
      * This method should be used in most cases as it handles both namespaces and command registration fully.
      */
     public void register(@NotNull PluginMeta meta) {

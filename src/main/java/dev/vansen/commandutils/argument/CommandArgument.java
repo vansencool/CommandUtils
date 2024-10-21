@@ -1,18 +1,22 @@
 package dev.vansen.commandutils.argument;
 
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
-import com.mojang.brigadier.arguments.ArgumentType;
+import com.mojang.brigadier.arguments.*;
 import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import dev.vansen.commandutils.command.CommandExecutor;
 import dev.vansen.commandutils.command.CommandWrapper;
 import dev.vansen.commandutils.command.ExecutableSender;
+import dev.vansen.commandutils.command.Position;
 import dev.vansen.commandutils.completer.CompletionHandler;
 import dev.vansen.commandutils.completer.SuggestionsBuilderWrapper;
 import dev.vansen.commandutils.exceptions.CmdException;
-import dev.vansen.commandutils.messages.SystemMessages;
+import dev.vansen.commandutils.messages.MessageTypes;
+import dev.vansen.commandutils.permission.CommandPermission;
 import dev.vansen.commandutils.sender.SenderTypes;
+import dev.vansen.commandutils.subcommand.AbstractSubCommand;
 import dev.vansen.commandutils.subcommand.SubCommand;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
+import io.papermc.paper.command.brigadier.argument.ArgumentTypes;
 import org.bukkit.command.BlockCommandSender;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.ConsoleCommandSender;
@@ -121,7 +125,7 @@ public final class CommandArgument {
     }
 
     /**
-     * Factory method to create a new instance of {@link CommandArgument}.
+     * Factory method to create a new instance of {@link CommandArgument} with a name and ArgumentType.
      *
      * @param name the name of the argument.
      * @param type the type of the argument.
@@ -130,6 +134,116 @@ public final class CommandArgument {
     @NotNull
     public static <T> CommandArgument of(@NotNull String name, @NotNull ArgumentType<T> type) {
         return new CommandArgument(name, type);
+    }
+
+    /**
+     * Creates a new string argument with the specified name.
+     *
+     * @param name the name of the argument.
+     * @return a new {@link CommandArgument} instance representing a string argument.
+     */
+    @NotNull
+    public static CommandArgument string(@NotNull String name) {
+        return new CommandArgument(name, StringArgumentType.string());
+    }
+
+    /**
+     * Creates a new word argument with the specified name.
+     *
+     * @param name the name of the argument.
+     * @return a new {@link CommandArgument} instance representing a word argument.
+     */
+    @NotNull
+    public static CommandArgument word(@NotNull String name) {
+        return new CommandArgument(name, StringArgumentType.word());
+    }
+
+    /**
+     * Creates a new greedy string argument with the specified name.
+     *
+     * @param name the name of the argument.
+     * @return a new {@link CommandArgument} instance representing a greedy string argument.
+     */
+    @NotNull
+    public static CommandArgument greedy(@NotNull String name) {
+        return new CommandArgument(name, StringArgumentType.greedyString());
+    }
+
+    /**
+     * Creates a new integer argument with the specified name.
+     *
+     * @param name the name of the argument.
+     * @return a new {@link CommandArgument} instance representing an integer argument.
+     */
+    @NotNull
+    public static CommandArgument integer(@NotNull String name) {
+        return new CommandArgument(name, IntegerArgumentType.integer());
+    }
+
+    /**
+     * Creates a new double argument with the specified name.
+     *
+     * @param name the name of the argument.
+     * @return a new {@link CommandArgument} instance representing a double argument.
+     */
+    @NotNull
+    public static CommandArgument doubleArg(@NotNull String name) {
+        return new CommandArgument(name, DoubleArgumentType.doubleArg());
+    }
+
+    /**
+     * Creates a new float argument with the specified name.
+     *
+     * @param name the name of the argument.
+     * @return a new {@link CommandArgument} instance representing a float argument.
+     */
+    @NotNull
+    public static CommandArgument floatArg(@NotNull String name) {
+        return new CommandArgument(name, FloatArgumentType.floatArg());
+    }
+
+    /**
+     * Creates a new long argument with the specified name.
+     *
+     * @param name the name of the argument.
+     * @return a new {@link CommandArgument} instance representing a long argument.
+     */
+    @NotNull
+    public static CommandArgument longArg(@NotNull String name) {
+        return new CommandArgument(name, LongArgumentType.longArg());
+    }
+
+    /**
+     * Creates a new item stack argument with the specified name.
+     *
+     * @param name the name of the argument.
+     * @return a new {@link CommandArgument} instance representing an item stack argument.
+     */
+    @NotNull
+    public static CommandArgument itemStack(@NotNull String name) {
+        return new CommandArgument(name, ArgumentTypes.itemStack());
+    }
+
+    /**
+     * Creates a new world argument with the specified name.
+     *
+     * @param name the name of the argument.
+     * @return a new {@link CommandArgument} instance representing a world argument.
+     */
+    @NotNull
+    public static CommandArgument world(@NotNull String name) {
+        return new CommandArgument(name, ArgumentTypes.world());
+    }
+
+    /**
+     * Creates a new game mode argument with the specified name.
+     *
+     * @param name the name of the argument.
+     * @return a new {@link CommandArgument} instance representing a game mode argument.
+     */
+    @NotNull
+    public static CommandArgument gameMode(@NotNull String name) {
+        return new CommandArgument(name, ArgumentTypes.gameMode());
     }
 
     private void execute() {
@@ -142,27 +256,35 @@ public final class CommandArgument {
                     case Player player when playerExecutor != null -> playerExecutor.execute(wrapped);
                     case ConsoleCommandSender consoleCommandSender when consoleExecutor != null ->
                             consoleExecutor.execute(wrapped);
-                    case Entity entity when entityExecutor != null -> entityExecutor.execute(wrapped);
                     case BlockCommandSender blockCommandSender when blockExecutor != null ->
                             blockExecutor.execute(wrapped);
-                    case ProxiedCommandSender proxiedCommandSender when proxiedExecutor != null ->
-                            proxiedExecutor.execute(wrapped);
-                    default -> Optional.ofNullable(defaultExecutor)
-                            .ifPresent(executor -> {
-                                if (senderTypes == null) executor.execute(wrapped);
-                                else if (Arrays.stream(senderTypes)
-                                        .anyMatch(type -> type == wrapped.senderType())) executor.execute(wrapped);
-                                else {
-                                    switch (wrapped.senderType()) {
-                                        case PLAYER -> wrapped.response(SystemMessages.NOT_ALLOWED_PLAYER);
-                                        case CONSOLE -> wrapped.response(SystemMessages.NOT_ALLOWED_CONSOLE);
-                                        case ENTITY -> wrapped.response(SystemMessages.NOT_ALLOWED_ENTITY);
-                                        case COMMAND_BLOCK ->
-                                                wrapped.response(SystemMessages.NOT_ALLOWED_COMMAND_BLOCK);
-                                        case PROXIED -> wrapped.response(SystemMessages.NOT_ALLOWED_PROXIED_SENDER);
-                                    }
-                                }
-                            });
+                    default -> {
+                        switch (context.getSource().getExecutor()) {
+                            case null -> {
+                            }
+                            case Entity entity when entityExecutor != null -> entityExecutor.execute(wrapped);
+                            case ProxiedCommandSender proxiedCommandSender when proxiedExecutor != null ->
+                                    proxiedExecutor.execute(wrapped);
+                            default -> Optional.ofNullable(defaultExecutor)
+                                    .ifPresent(executor -> {
+                                        if (senderTypes == null) executor.execute(wrapped);
+                                        else if (Arrays.stream(senderTypes)
+                                                .anyMatch(type -> type == wrapped.senderType()))
+                                            executor.execute(wrapped);
+                                        else {
+                                            switch (wrapped.senderType()) {
+                                                case PLAYER -> wrapped.response(MessageTypes.NOT_ALLOWED_PLAYER);
+                                                case CONSOLE -> wrapped.response(MessageTypes.NOT_ALLOWED_CONSOLE);
+                                                case ENTITY -> wrapped.response(MessageTypes.NOT_ALLOWED_ENTITY);
+                                                case COMMAND_BLOCK ->
+                                                        wrapped.response(MessageTypes.NOT_ALLOWED_COMMAND_BLOCK);
+                                                case PROXIED ->
+                                                        wrapped.response(MessageTypes.NOT_ALLOWED_PROXIED_SENDER);
+                                            }
+                                        }
+                                    });
+                        }
+                    }
                 }
                 return 1;
             } catch (CmdException e) {
@@ -295,6 +417,19 @@ public final class CommandArgument {
 
     /**
      * Adds an argument to the argument.
+     *
+     * @param argument the {@link AbstractCommandArgument}
+     * @return this {@link CommandArgument} instance for chaining.
+     */
+    @NotNull
+    @CanIgnoreReturnValue
+    public CommandArgument argument(@NotNull AbstractCommandArgument argument) {
+        argumentStack.add(argument.build().get());
+        return this;
+    }
+
+    /**
+     * Adds an argument to the argument.
      * This method allows required arguments to be added to the command.
      *
      * @param <T>      the type of the argument.
@@ -392,15 +527,15 @@ public final class CommandArgument {
      */
     @NotNull
     @CanIgnoreReturnValue
-    public CommandArgument completion(@NotNull ArgumentPosition position, @NotNull CompletionHandler handler) {
+    public CommandArgument completion(@NotNull Position position, @NotNull CompletionHandler handler) {
         switch (position) {
-            case ArgumentPosition.FIRST -> argumentStack.getFirst()
+            case Position.FIRST -> argumentStack.getFirst()
                     .suggests((context, builder) -> {
                         CommandWrapper wrapped = new CommandWrapper(context);
                         SuggestionsBuilderWrapper wrapper = new SuggestionsBuilderWrapper(builder);
                         return handler.complete(wrapped, wrapper);
                     });
-            case ArgumentPosition.LAST -> argumentStack.getLast()
+            case Position.LAST -> argumentStack.getLast()
                     .suggests((context, builder) -> {
                         CommandWrapper wrapped = new CommandWrapper(context);
                         SuggestionsBuilderWrapper wrapper = new SuggestionsBuilderWrapper(builder);
@@ -432,13 +567,43 @@ public final class CommandArgument {
     /**
      * Adds a subcommand to the argument.
      *
-     * @param subcommand the {@link SubCommand} to be added.
+     * @param subCommand the {@link SubCommand} to be added.
      * @return this {@link CommandArgument} instance for chaining.
      */
     @NotNull
     @CanIgnoreReturnValue
-    public CommandArgument subCommand(@NotNull SubCommand subcommand) {
-        argument.then(subcommand.get());
+    public CommandArgument subCommand(@NotNull SubCommand subCommand) {
+        argument.then(subCommand.get());
+        return this;
+    }
+
+    /**
+     * Adds a subcommand to the argument.
+     *
+     * @param subCommand the {@link AbstractSubCommand} to be added.
+     * @return this {@link CommandArgument} instance for chaining.
+     */
+    @NotNull
+    @CanIgnoreReturnValue
+    public CommandArgument subCommand(@NotNull AbstractSubCommand subCommand) {
+        argument.then(subCommand.build().get());
+        return this;
+    }
+
+    /**
+     * Adds a permission to the argument.
+     *
+     * @param permission the {@link CommandPermission} to be added.
+     * @return this {@link CommandArgument} instance for chaining.
+     */
+    @NotNull
+    @CanIgnoreReturnValue
+    public CommandArgument permission(@NotNull CommandPermission permission) {
+        if (permission.isOpPermission()) {
+            argument.requires(consumer -> consumer.getSender().isOp());
+        } else if (permission.getPermission() != null) {
+            argument.requires(consumer -> consumer.getSender().hasPermission(permission.getPermission()));
+        }
         return this;
     }
 

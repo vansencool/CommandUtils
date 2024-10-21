@@ -3,16 +3,17 @@ package dev.vansen.commandutils.subcommand;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.builder.RequiredArgumentBuilder;
+import dev.vansen.commandutils.argument.AbstractCommandArgument;
 import dev.vansen.commandutils.argument.ArgumentNester;
-import dev.vansen.commandutils.argument.ArgumentPosition;
 import dev.vansen.commandutils.argument.CommandArgument;
 import dev.vansen.commandutils.command.CommandExecutor;
 import dev.vansen.commandutils.command.CommandWrapper;
 import dev.vansen.commandutils.command.ExecutableSender;
+import dev.vansen.commandutils.command.Position;
 import dev.vansen.commandutils.completer.CompletionHandler;
 import dev.vansen.commandutils.completer.SuggestionsBuilderWrapper;
 import dev.vansen.commandutils.exceptions.CmdException;
-import dev.vansen.commandutils.messages.SystemMessages;
+import dev.vansen.commandutils.messages.MessageTypes;
 import dev.vansen.commandutils.permission.CommandPermission;
 import dev.vansen.commandutils.sender.SenderTypes;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
@@ -76,27 +77,35 @@ public final class SubCommand {
                     case Player player when playerExecutor != null -> playerExecutor.execute(wrapped);
                     case ConsoleCommandSender consoleCommandSender when consoleExecutor != null ->
                             consoleExecutor.execute(wrapped);
-                    case Entity entity when entityExecutor != null -> entityExecutor.execute(wrapped);
                     case BlockCommandSender blockCommandSender when blockExecutor != null ->
                             blockExecutor.execute(wrapped);
-                    case ProxiedCommandSender proxiedCommandSender when proxiedExecutor != null ->
-                            proxiedExecutor.execute(wrapped);
-                    default -> Optional.ofNullable(defaultExecutor)
-                            .ifPresent(executor -> {
-                                if (senderTypes == null) executor.execute(wrapped);
-                                else if (Arrays.stream(senderTypes)
-                                        .anyMatch(type -> type == wrapped.senderType())) executor.execute(wrapped);
-                                else {
-                                    switch (wrapped.senderType()) {
-                                        case PLAYER -> wrapped.response(SystemMessages.NOT_ALLOWED_PLAYER);
-                                        case CONSOLE -> wrapped.response(SystemMessages.NOT_ALLOWED_CONSOLE);
-                                        case ENTITY -> wrapped.response(SystemMessages.NOT_ALLOWED_ENTITY);
-                                        case COMMAND_BLOCK ->
-                                                wrapped.response(SystemMessages.NOT_ALLOWED_COMMAND_BLOCK);
-                                        case PROXIED -> wrapped.response(SystemMessages.NOT_ALLOWED_PROXIED_SENDER);
-                                    }
-                                }
-                            });
+                    default -> {
+                        switch (context.getSource().getExecutor()) {
+                            case null -> {
+                            }
+                            case Entity entity when entityExecutor != null -> entityExecutor.execute(wrapped);
+                            case ProxiedCommandSender proxiedCommandSender when proxiedExecutor != null ->
+                                    proxiedExecutor.execute(wrapped);
+                            default -> Optional.ofNullable(defaultExecutor)
+                                    .ifPresent(executor -> {
+                                        if (senderTypes == null) executor.execute(wrapped);
+                                        else if (Arrays.stream(senderTypes)
+                                                .anyMatch(type -> type == wrapped.senderType()))
+                                            executor.execute(wrapped);
+                                        else {
+                                            switch (wrapped.senderType()) {
+                                                case PLAYER -> wrapped.response(MessageTypes.NOT_ALLOWED_PLAYER);
+                                                case CONSOLE -> wrapped.response(MessageTypes.NOT_ALLOWED_CONSOLE);
+                                                case ENTITY -> wrapped.response(MessageTypes.NOT_ALLOWED_ENTITY);
+                                                case COMMAND_BLOCK ->
+                                                        wrapped.response(MessageTypes.NOT_ALLOWED_COMMAND_BLOCK);
+                                                case PROXIED ->
+                                                        wrapped.response(MessageTypes.NOT_ALLOWED_PROXIED_SENDER);
+                                            }
+                                        }
+                                    });
+                        }
+                    }
                 }
                 return 1;
             } catch (CmdException e) {
@@ -106,7 +115,6 @@ public final class SubCommand {
         });
     }
 
-    // internal
     private void executeIf() {
         if (defaultExecutor != null || playerExecutor != null || consoleExecutor != null || blockExecutor != null || proxiedExecutor != null) {
             execute();
@@ -229,6 +237,19 @@ public final class SubCommand {
     }
 
     /**
+     * Adds an argument to the subcommand.
+     *
+     * @param argument the {@link AbstractCommandArgument}
+     * @return this {@link SubCommand} instance for chaining.
+     */
+    @NotNull
+    @CanIgnoreReturnValue
+    public SubCommand argument(@NotNull AbstractCommandArgument argument) {
+        argumentStack.add(argument.build().get());
+        return this;
+    }
+
+    /**
      * Adds a subcommand to the subcommand.
      * Subcommands are separate execution paths that have their own logic.
      *
@@ -239,6 +260,20 @@ public final class SubCommand {
     @CanIgnoreReturnValue
     public SubCommand subCommand(@NotNull SubCommand subCommand) {
         builder.then(subCommand.get());
+        return this;
+    }
+
+    /**
+     * Adds a subcommand to the subcommand.
+     * Subcommands are separate execution paths that have their own logic.
+     *
+     * @param subCommand the {@link AbstractSubCommand} to be added.
+     * @return this {@link SubCommand} instance for chaining.
+     */
+    @NotNull
+    @CanIgnoreReturnValue
+    public SubCommand subCommand(@NotNull AbstractSubCommand subCommand) {
+        builder.then(subCommand.build().get());
         return this;
     }
 
@@ -268,15 +303,15 @@ public final class SubCommand {
      */
     @NotNull
     @CanIgnoreReturnValue
-    public SubCommand completion(@NotNull ArgumentPosition position, @NotNull CompletionHandler handler) {
+    public SubCommand completion(@NotNull Position position, @NotNull CompletionHandler handler) {
         switch (position) {
-            case ArgumentPosition.FIRST -> argumentStack.getFirst()
+            case Position.FIRST -> argumentStack.getFirst()
                     .suggests((context, builder) -> {
                         CommandWrapper wrapped = new CommandWrapper(context);
                         SuggestionsBuilderWrapper wrapper = new SuggestionsBuilderWrapper(builder);
                         return handler.complete(wrapped, wrapper);
                     });
-            case ArgumentPosition.LAST -> argumentStack.getLast()
+            case Position.LAST -> argumentStack.getLast()
                     .suggests((context, builder) -> {
                         CommandWrapper wrapped = new CommandWrapper(context);
                         SuggestionsBuilderWrapper wrapper = new SuggestionsBuilderWrapper(builder);

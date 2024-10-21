@@ -1,9 +1,11 @@
 package dev.vansen.commandutils.exceptions;
 
+import dev.vansen.commandutils.messages.MessageTypes;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.command.CommandException;
 import org.bukkit.command.CommandSender;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -42,6 +44,11 @@ public final class CmdException extends CommandException {
     public CmdException(@Nullable Component message, @Nullable CommandSender sender) {
         super(PlainTextComponentSerializer.plainText().serializeOrNull(message));
         this.message = message;
+        this.sender = sender;
+    }
+
+    public CmdException(@NotNull MessageTypes message, @Nullable CommandSender sender) {
+        super(message.message());
         this.sender = sender;
     }
 
