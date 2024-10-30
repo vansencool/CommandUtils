@@ -240,6 +240,18 @@ public record CommandWrapper(CommandContext<CommandSourceStack> context) {
     }
 
     /**
+     * Helper method to check if a flag exists in the input.
+     *
+     * @param flag The flag to check.
+     * @return True if the flag exists, false otherwise.
+     */
+    public boolean hasFlag(@NotNull String flag) {
+        return Arrays.asList(context.getInput()
+                        .split(" "))
+                .remove(flag);
+    }
+
+    /**
      * Helper method to get the number of arguments.
      *
      * @return The number of arguments in the command.
@@ -329,7 +341,7 @@ public record CommandWrapper(CommandContext<CommandSourceStack> context) {
      * @return the argument value converted to a world.
      */
     public World argWorld(@NotNull String arg) {
-        return Bukkit.getWorld(argString(arg).replace("minecraft:", ""));
+        return context.getArgument(arg, World.class);
     }
 
     /**
