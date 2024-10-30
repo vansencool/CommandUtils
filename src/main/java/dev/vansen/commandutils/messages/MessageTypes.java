@@ -15,13 +15,13 @@ public enum MessageTypes {
     NOT_ALLOWED_COMMAND_BLOCK("<color:#ff4060>You are not allowed to execute this from a command block!</color>"),
     NOT_ALLOWED_PROXIED_SENDER("<color:#ff4060>You are not allowed to execute this as a proxied command sender!</color>");
 
-    private String message;
+    private @NotNull String message;
 
     MessageTypes(@NotNull String message) {
         this.message = message;
     }
 
-    public String message() {
+    public @NotNull String message() {
         return message;
     }
 

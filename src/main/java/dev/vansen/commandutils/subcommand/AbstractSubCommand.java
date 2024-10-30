@@ -3,8 +3,10 @@ package dev.vansen.commandutils.subcommand;
 import dev.vansen.commandutils.argument.AbstractCommandArgument;
 import dev.vansen.commandutils.argument.CommandArgument;
 import dev.vansen.commandutils.command.CommandWrapper;
+import dev.vansen.commandutils.command.ExecutableSender;
 import dev.vansen.commandutils.command.Position;
 import dev.vansen.commandutils.permission.CommandPermission;
+import dev.vansen.commandutils.sender.SenderTypes;
 import org.jetbrains.annotations.NotNull;
 
 import java.lang.reflect.Method;
@@ -18,28 +20,26 @@ public abstract class AbstractSubCommand {
         this.name = name;
     }
 
+    public SenderTypes[] senderTypes() {
+        return null;
+    }
+
     public void execute(@NotNull CommandWrapper context) {
-        // Default implementation
     }
 
     public void playerExecute(@NotNull CommandWrapper context) {
-        // Default implementation
     }
 
     public void consoleExecute(@NotNull CommandWrapper context) {
-        // Default implementation
     }
 
     public void entityExecute(@NotNull CommandWrapper context) {
-        // Default implementation
     }
 
     public void blockExecute(@NotNull CommandWrapper context) {
-        // Default implementation
     }
 
     public void proxiedExecute(@NotNull CommandWrapper context) {
-        // Default implementation
     }
 
     public CommandPermission permission() {
@@ -84,7 +84,11 @@ public abstract class AbstractSubCommand {
             Method executeMethod = this.getClass().getDeclaredMethod("execute", CommandWrapper.class);
             Method superExecuteMethod = AbstractSubCommand.class.getDeclaredMethod("execute", CommandWrapper.class);
             if (!executeMethod.equals(superExecuteMethod)) {
-                sub.defaultExecute(this::execute);
+                if (senderTypes() != null) {
+                    sub.defaultExecute(this::execute, ExecutableSender.types(senderTypes()));
+                } else {
+                    sub.defaultExecute(this::execute);
+                }
             }
         } catch (NoSuchMethodException ignored) {
         }

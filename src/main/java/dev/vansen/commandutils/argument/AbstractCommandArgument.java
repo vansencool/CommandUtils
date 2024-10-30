@@ -2,9 +2,11 @@ package dev.vansen.commandutils.argument;
 
 import com.mojang.brigadier.arguments.ArgumentType;
 import dev.vansen.commandutils.command.CommandWrapper;
+import dev.vansen.commandutils.command.ExecutableSender;
 import dev.vansen.commandutils.command.Position;
 import dev.vansen.commandutils.completer.CompletionHandler;
 import dev.vansen.commandutils.permission.CommandPermission;
+import dev.vansen.commandutils.sender.SenderTypes;
 import dev.vansen.commandutils.subcommand.AbstractSubCommand;
 import dev.vansen.commandutils.subcommand.SubCommand;
 import org.jetbrains.annotations.NotNull;
@@ -33,6 +35,10 @@ public abstract class AbstractCommandArgument {
 
     public <T> AbstractCommandArgument(@NotNull String name, @NotNull ArgumentType<T> type, CompletionHandler handler) {
         this(new Argument<>(name, type), handler);
+    }
+
+    public SenderTypes[] senderTypes() {
+        return null;
     }
 
     public void execute(@NotNull CommandWrapper context) {
@@ -95,7 +101,11 @@ public abstract class AbstractCommandArgument {
             Method executeMethod = this.getClass().getDeclaredMethod("execute", CommandWrapper.class);
             Method superExecuteMethod = AbstractCommandArgument.class.getDeclaredMethod("execute", CommandWrapper.class);
             if (!executeMethod.equals(superExecuteMethod)) {
-                arg.defaultExecute(this::execute);
+                if (senderTypes() != null) {
+                    arg.defaultExecute(this::execute, ExecutableSender.types(senderTypes()));
+                } else {
+                    arg.defaultExecute(this::execute);
+                }
             }
         } catch (NoSuchMethodException ignored) {
         }

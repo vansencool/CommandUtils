@@ -1,10 +1,12 @@
 package dev.vansen.commandutils.completer;
 
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
+import com.mojang.brigadier.context.StringRange;
 import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -105,9 +107,18 @@ public final class SuggestionsBuilderWrapper {
      * @return an {@link CompletableFuture} containing an empty {@link Suggestions}
      */
     @NotNull
-    @CanIgnoreReturnValue
     public CompletableFuture<Suggestions> empty() {
         return Suggestions.empty();
+    }
+
+    /**
+     * Returns an empty {@link Suggestions}.
+     *
+     * @return an empty {@link Suggestions}
+     */
+    @NotNull
+    public Suggestions emptyFuture() {
+        return new Suggestions(StringRange.at(0), new ArrayList<>());
     }
 
     /**

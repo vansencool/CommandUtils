@@ -329,7 +329,7 @@ public record CommandWrapper(CommandContext<CommandSourceStack> context) {
      * @return the argument value converted to a world.
      */
     public World argWorld(@NotNull String arg) {
-        return Bukkit.getWorld(arg.replace("minecraft:", ""));
+        return Bukkit.getWorld(argString(arg).replace("minecraft:", ""));
     }
 
     /**
