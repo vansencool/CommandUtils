@@ -1,5 +1,6 @@
 package dev.vansen.commandutils.completer;
 
+import net.kyori.adventure.text.Component;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -50,6 +51,17 @@ public final class Suggestion {
     }
 
     /**
+     * Creates a new suggestion with the given text and tooltip.
+     *
+     * @param text    the text of the suggestion
+     * @param tooltip the tooltip associated with the suggestion
+     */
+    public Suggestion(@NotNull String text, @NotNull Component tooltip) {
+        this.text = text;
+        this.tooltip = Tooltiper.of(tooltip);
+    }
+
+    /**
      * Factory method to create a new instance of {@link Suggestion}.
      *
      * @param text the text of the suggestion
@@ -78,6 +90,17 @@ public final class Suggestion {
      * @return a new {@link Suggestion} instance
      */
     public Suggestion of(@NotNull String text, @NotNull String tooltip) {
+        return new Suggestion(text, tooltip);
+    }
+
+    /**
+     * Factory method to create a new instance of {@link Suggestion}.
+     *
+     * @param text    the text of the suggestion
+     * @param tooltip the tooltip associated with the suggestion
+     * @return a new {@link Suggestion} instance
+     */
+    public Suggestion of(@NotNull String text, @NotNull Component tooltip) {
         return new Suggestion(text, tooltip);
     }
 

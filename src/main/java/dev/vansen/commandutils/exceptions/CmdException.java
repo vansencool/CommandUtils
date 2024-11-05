@@ -1,7 +1,9 @@
 package dev.vansen.commandutils.exceptions;
 
 import dev.vansen.commandutils.messages.MessageTypes;
+import dev.vansen.commandutils.messages.SendType;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.command.CommandException;
 import org.bukkit.command.CommandSender;
@@ -23,6 +25,10 @@ public final class CmdException extends CommandException {
      * The message to be sent to the command sender.
      */
     private @Nullable Component message;
+    /**
+     * The type of message to be sent to the command sender.
+     */
+    private @Nullable SendType type;
 
     /**
      * Constructs a new {@link CmdException} with the specified message and sender.
@@ -47,16 +53,29 @@ public final class CmdException extends CommandException {
         this.sender = sender;
     }
 
+    /**
+     * Constructs a new {@link CmdException} with the specified message type and sender.
+     *
+     * @param message the message type of the exception.
+     * @param sender  the {@link CommandSender} to whom the error message should be sent.
+     */
     public CmdException(@NotNull MessageTypes message, @Nullable CommandSender sender) {
         super(message.message());
         this.sender = sender;
+        this.type = message.type();
     }
 
     /**
      * Sends the exception message to the command sender.
-     * This method sends the message using the {@code sendRichMessage} or {@code sendMessage} method of {@link CommandSender}.
+     * This method sends the message using the {@link CommandSender#sendRichMessage(String)} or {@link CommandSender#sendMessage(Component)} or {@link CommandSender#sendActionBar(Component)}.
      */
     public void send() {
+        if (type != null && sender != null) {
+            switch (type) {
+                case MESSAGE -> sender.sendRichMessage(getMessage());
+                case ACTION_BAR -> sender.sendActionBar(MiniMessage.miniMessage().deserializeOrNull(getMessage()));
+            }
+        }
         if (sender == null || getMessage() == null && message == null) return;
         if (message != null) sender.sendMessage(message);
         else sender.sendRichMessage(getMessage());

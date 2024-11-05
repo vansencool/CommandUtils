@@ -6,6 +6,7 @@ import dev.vansen.commandutils.messages.MessageTypes;
 import dev.vansen.commandutils.sender.SenderTypes;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.OfflinePlayer;
@@ -174,7 +175,10 @@ public record CommandWrapper(CommandContext<CommandSourceStack> context) {
      */
     public void response(@Nullable MessageTypes message) {
         if (message == null) return;
-        sender().sendMessage(message.message());
+        switch (message.type()) {
+            case MESSAGE -> sender().sendMessage(message.message());
+            case ACTION_BAR -> sender().sendActionBar(MiniMessage.miniMessage().deserializeOrNull(message.message()));
+        }
     }
 
     /**
@@ -365,6 +369,16 @@ public record CommandWrapper(CommandContext<CommandSourceStack> context) {
     }
 
     /**
+     * Retrieves a command argument by its name and converts it to a player.
+     *
+     * @param arg the name of the argument.
+     * @return the argument value converted to a player.
+     */
+    public Player argPlayer(@NotNull String arg) {
+        return context.getArgument(arg, Player.class);
+    }
+
+    /**
      * Retrieves a command argument by its name and converts it to a boolean.
      * If the argument is not present or invalid, returns the default value.
      *
@@ -444,7 +458,7 @@ public record CommandWrapper(CommandContext<CommandSourceStack> context) {
      * @param def the default value to return if the argument is not present.
      * @return the argument value converted to a world, or the default value if not present or invalid.
      */
-    public World argWorld(@NotNull String arg, World def) {
+    public World argWorld(@NotNull String arg, @Nullable World def) {
         try {
             return argWorld(arg);
         } catch (Exception e) {
@@ -460,7 +474,7 @@ public record CommandWrapper(CommandContext<CommandSourceStack> context) {
      * @param def the default value to return if the argument is not present.
      * @return the argument value converted to a game mode, or the default value if not present or invalid.
      */
-    public GameMode argGameMode(@NotNull String arg, GameMode def) {
+    public GameMode argGameMode(@NotNull String arg, @Nullable GameMode def) {
         try {
             return argGameMode(arg);
         } catch (Exception e) {
@@ -476,9 +490,25 @@ public record CommandWrapper(CommandContext<CommandSourceStack> context) {
      * @param def the default value to return if the argument is not present.
      * @return the argument value converted to an item stack, or the default value if not present or invalid.
      */
-    public ItemStack argItemStack(@NotNull String arg, ItemStack def) {
+    public ItemStack argItemStack(@NotNull String arg, @Nullable ItemStack def) {
         try {
             return argItemStack(arg);
+        } catch (Exception e) {
+            return def;
+        }
+    }
+
+    /**
+     * Retrieves a command argument by its name and converts it to a player.
+     * If the argument is not present or invalid, returns the default value.
+     *
+     * @param arg the name of the argument.
+     * @param def the default value to return if the argument is not present.
+     * @return the argument value converted to a player, or the default value if not present or invalid.
+     */
+    public Player argPlayer(@NotNull String arg, @Nullable Player def) {
+        try {
+            return argPlayer(arg);
         } catch (Exception e) {
             return def;
         }

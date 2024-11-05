@@ -6,6 +6,7 @@ import dev.vansen.commandutils.command.CommandExecutor;
 import dev.vansen.commandutils.command.CommandWrapper;
 import dev.vansen.commandutils.command.ExecutableSender;
 import dev.vansen.commandutils.command.Position;
+import dev.vansen.commandutils.info.Aliases;
 import dev.vansen.commandutils.info.CommandInfo;
 import dev.vansen.commandutils.sender.SenderTypes;
 import dev.vansen.commandutils.subcommand.AbstractSubCommand;
@@ -18,6 +19,7 @@ import java.util.List;
 @SuppressWarnings("unused")
 public abstract class AbstractCommandUtils {
     private final String name;
+    private Aliases aliases;
     private CommandExecutor defaultExecutor;
     private CommandExecutor playerExecutor;
     private CommandExecutor consoleExecutor;
@@ -27,6 +29,21 @@ public abstract class AbstractCommandUtils {
 
     public AbstractCommandUtils(@NotNull String commandName) {
         this.name = commandName;
+    }
+
+    public AbstractCommandUtils(@NotNull String commandName, @NotNull Aliases aliases) {
+        this.name = commandName;
+        this.aliases = aliases;
+    }
+
+    public AbstractCommandUtils(@NotNull String commandName, @NotNull List<String> aliases) {
+        this.name = commandName;
+        this.aliases = Aliases.of(aliases);
+    }
+    
+    public AbstractCommandUtils(@NotNull String commandName, @NotNull String... aliases) {
+        this.name = commandName;
+        this.aliases = Aliases.of(aliases);
     }
 
     public void execute(@NotNull CommandWrapper context) {
@@ -148,6 +165,7 @@ public abstract class AbstractCommandUtils {
         }
 
         if (info() != null) commandUtils.info(info());
+        if (aliases != null) commandUtils.aliases(aliases);
 
         if (argumentPosition() == Position.LAST) {
             if (abstractSubCommandPosition() == Position.LAST) {

@@ -170,6 +170,17 @@ public final class CommandArgument {
     }
 
     /**
+     * Creates a new boolean argument with the specified name.
+     *
+     * @param name the name of the argument.
+     * @return a new {@link CommandArgument} instance representing a boolean argument.
+     */
+    @NotNull
+    public static CommandArgument bool(@NotNull String name) {
+        return new CommandArgument(name, BoolArgumentType.bool());
+    }
+
+    /**
      * Creates a new integer argument with the specified name.
      *
      * @param name the name of the argument.
@@ -178,6 +189,30 @@ public final class CommandArgument {
     @NotNull
     public static CommandArgument integer(@NotNull String name) {
         return new CommandArgument(name, IntegerArgumentType.integer());
+    }
+
+    /**
+     * Creates a new integer argument with the specified name and minimum value.
+     *
+     * @param name the name of the argument.
+     * @param min  the minimum value for the integer argument.
+     * @return a new {@link CommandArgument} instance representing an integer argument.
+     */
+    @NotNull
+    public static CommandArgument integer(@NotNull String name, int min) {
+        return new CommandArgument(name, IntegerArgumentType.integer(min));
+    }
+
+    /**
+     * Creates a new integer argument with the specified name and a minimum and maximum value.
+     *
+     * @param name the name of the argument.
+     * @param max  the maximum value for the integer argument.
+     * @return a new {@link CommandArgument} instance representing an integer argument.
+     */
+    @NotNull
+    public static CommandArgument integer(@NotNull String name, int min, int max) {
+        return new CommandArgument(name, IntegerArgumentType.integer(min, max));
     }
 
     /**

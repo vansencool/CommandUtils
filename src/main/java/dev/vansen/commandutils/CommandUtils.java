@@ -14,6 +14,7 @@ import dev.vansen.commandutils.command.Position;
 import dev.vansen.commandutils.completer.CompletionHandler;
 import dev.vansen.commandutils.completer.SuggestionsBuilderWrapper;
 import dev.vansen.commandutils.exceptions.CmdException;
+import dev.vansen.commandutils.info.Aliases;
 import dev.vansen.commandutils.info.CommandInfo;
 import dev.vansen.commandutils.messages.MessageTypes;
 import dev.vansen.commandutils.permission.CommandPermission;
@@ -385,6 +386,75 @@ public final class CommandUtils {
         } else if (permission.getPermission() != null) {
             builder.requires(consumer -> consumer.getSender().hasPermission(permission.getPermission()));
         }
+        return this;
+    }
+
+    /**
+     * Sets the aliases of the command using an {@link Aliases} instance.
+     *
+     * @param aliases a {@link Aliases} for setting metadata.
+     * @return this {@link CommandUtils} instance for chaining.
+     */
+    @NotNull
+    @CanIgnoreReturnValue
+    public CommandUtils aliases(@NotNull Aliases aliases) {
+        this.aliases = aliases.getAliases();
+        return this;
+    }
+
+    /**
+     * Sets the aliases of the command using an array of strings.
+     *
+     * @param aliases an array of strings for setting metadata.
+     * @return this {@link CommandUtils} instance for chaining.
+     */
+    @NotNull
+    @CanIgnoreReturnValue
+    public CommandUtils aliases(@NotNull String... aliases) {
+        this.aliases = Arrays.asList(aliases);
+        return this;
+    }
+
+    /**
+     * Sets the aliases of the command using a list of strings.
+     *
+     * @param aliases a list of strings for setting metadata.
+     * @return this {@link CommandUtils} instance for chaining.
+     */
+    @NotNull
+    @CanIgnoreReturnValue
+    public CommandUtils aliases(@NotNull List<String> aliases) {
+        this.aliases = aliases;
+        return this;
+    }
+
+    /**
+     * Sets the permission of the command using a {@link CommandPermission} instance.
+     *
+     * @param permission a {@link CommandPermission} for setting metadata.
+     * @return this {@link CommandUtils} instance for chaining.
+     */
+    @NotNull
+    @CanIgnoreReturnValue
+    public CommandUtils permission(@NotNull CommandPermission permission) {
+        if (permission.isOpPermission()) {
+            builder.requires(consumer -> consumer.getSender().isOp());
+        } else if (permission.getPermission() != null) {
+            builder.requires(consumer -> consumer.getSender().hasPermission(permission.getPermission()));
+        }
+        return this;
+    }
+
+    /**
+     * Sets the permission of the command using a string permission.
+     *
+     * @param permission a string permission for setting metadata.
+     * @return this {@link CommandUtils} instance for chaining.
+     */
+    @NotNull
+    @CanIgnoreReturnValue
+    public CommandUtils permission(@NotNull String permission) {
+        builder.requires(consumer -> consumer.getSender().hasPermission(permission));
         return this;
     }
 

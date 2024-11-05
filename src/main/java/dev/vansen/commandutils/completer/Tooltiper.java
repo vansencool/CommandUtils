@@ -1,21 +1,21 @@
 package dev.vansen.commandutils.completer;
 
 import com.mojang.brigadier.Message;
+import io.papermc.paper.command.brigadier.MessageComponentSerializer;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.jetbrains.annotations.NotNull;
 
 /**
  * A class that implements {@link Message} to provide a tooltip for tab completion suggestions.
  * This class is used to display additional information for a command suggestion.
  */
-@SuppressWarnings("unused")
+@SuppressWarnings({"unused", "UnstableApiUsage"})
 public final class Tooltiper implements Message {
 
     /**
      * The tooltip text to be displayed.
      */
-    private final @NotNull String tooltip;
+    private final @NotNull Message tooltip;
 
     /**
      * Constructs a new {@link Tooltiper} with the specified tooltip text.
@@ -23,11 +23,11 @@ public final class Tooltiper implements Message {
      * @param tooltip the text to be used as the tooltip. This should not be null.
      */
     public Tooltiper(@NotNull String tooltip) {
-        this.tooltip = tooltip;
+        this.tooltip = MessageComponentSerializer.message().serializeOrNull(Component.text(tooltip));
     }
 
     public Tooltiper(@NotNull Component tooltip) {
-        this(PlainTextComponentSerializer.plainText().serialize(tooltip));
+        this.tooltip = MessageComponentSerializer.message().serializeOrNull(tooltip);
     }
 
     /**
@@ -57,6 +57,6 @@ public final class Tooltiper implements Message {
      */
     @Override
     public @NotNull String getString() {
-        return tooltip;
+        return tooltip.getString();
     }
 }

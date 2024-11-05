@@ -67,6 +67,19 @@ public final class CommandInfo {
     }
 
     /**
+     * Sets the aliases of the command using an {@link Aliases} instance.
+     *
+     * @param aliases the aliases of the command.
+     * @return this {@link CommandInfo} instance for method chaining.
+     */
+    @NotNull
+    @CanIgnoreReturnValue
+    public CommandInfo aliases(@NotNull Aliases aliases) {
+        this.aliases = aliases.getAliases();
+        return this;
+    }
+
+    /**
      * Sets the required permission for the command.
      *
      * @param permission the {@link CommandPermission} required to execute the command.
