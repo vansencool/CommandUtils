@@ -4,6 +4,8 @@ import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.mojang.brigadier.context.StringRange;
 import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
+import io.papermc.paper.command.brigadier.MessageComponentSerializer;
+import net.kyori.adventure.text.Component;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
@@ -16,7 +18,7 @@ import java.util.concurrent.CompletableFuture;
  * building tab completion suggestions.
  * This class provides methods to add suggestions and build the completion results.
  */
-@SuppressWarnings("unused")
+@SuppressWarnings({"unused", "UnstableApiUsage"})
 public final class SuggestionsBuilderWrapper {
 
     private final @NotNull SuggestionsBuilder builder;
@@ -66,8 +68,8 @@ public final class SuggestionsBuilderWrapper {
      */
     @NotNull
     @CanIgnoreReturnValue
-    public SuggestionsBuilderWrapper suggest(@NotNull String suggestion, @NotNull Tooltiper tooltip) {
-        builder.suggest(suggestion, tooltip);
+    public SuggestionsBuilderWrapper suggest(@NotNull String suggestion, @NotNull String tooltip) {
+        builder.suggest(suggestion, MessageComponentSerializer.message().serializeOrNull(Component.text(tooltip)));
         return this;
     }
 
@@ -80,8 +82,8 @@ public final class SuggestionsBuilderWrapper {
      */
     @NotNull
     @CanIgnoreReturnValue
-    public SuggestionsBuilderWrapper suggest(@NotNull String suggestion, @NotNull String tooltip) {
-        builder.suggest(suggestion, Tooltiper.of(tooltip));
+    public SuggestionsBuilderWrapper suggest(@NotNull String suggestion, @NotNull Component tooltip) {
+        builder.suggest(suggestion, MessageComponentSerializer.message().serializeOrNull(tooltip));
         return this;
     }
 
