@@ -295,6 +295,10 @@ public final class CommandArgument {
                         done = true;
                         consoleExecutor.execute(wrapped);
                     }
+                    case RemoteConsoleCommandSender remoteConsoleCommandSender when remoteConsoleExecutor != null -> {
+                        done = true;
+                        remoteConsoleExecutor.execute(wrapped);
+                    }
                     case BlockCommandSender blockCommandSender when blockExecutor != null -> {
                         done = true;
                         blockExecutor.execute(wrapped);
