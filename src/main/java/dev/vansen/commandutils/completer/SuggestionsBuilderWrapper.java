@@ -6,6 +6,7 @@ import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import io.papermc.paper.command.brigadier.MessageComponentSerializer;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
@@ -69,7 +70,7 @@ public final class SuggestionsBuilderWrapper {
     @NotNull
     @CanIgnoreReturnValue
     public SuggestionsBuilderWrapper suggest(@NotNull String suggestion, @NotNull String tooltip) {
-        builder.suggest(suggestion, MessageComponentSerializer.message().serializeOrNull(Component.text(tooltip)));
+        builder.suggest(suggestion, MessageComponentSerializer.message().serializeOrNull(MiniMessage.miniMessage().deserializeOrNull(tooltip)));
         return this;
     }
 

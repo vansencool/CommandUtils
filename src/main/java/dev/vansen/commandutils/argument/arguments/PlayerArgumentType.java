@@ -15,7 +15,6 @@ import net.kyori.adventure.text.format.TextColor;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
@@ -25,8 +24,8 @@ import java.util.concurrent.CompletableFuture;
  */
 @SuppressWarnings({"UnstableApiUsage", "unused"})
 public final class PlayerArgumentType implements CustomArgumentType.Converted<Player, String> {
-    private String tooltip;
-    private @Nullable TextColor color;
+    private final @NotNull String tooltip;
+    private final @NotNull TextColor color;
 
     /**
      * Creates a new PlayerArgumentType with a custom tooltip and color.
@@ -34,7 +33,7 @@ public final class PlayerArgumentType implements CustomArgumentType.Converted<Pl
      * @param tooltip The tooltip to display when providing suggestions.
      * @param color   The color of the tooltip.
      */
-    public PlayerArgumentType(@NotNull String tooltip, @Nullable TextColor color) {
+    public PlayerArgumentType(@NotNull String tooltip, @NotNull TextColor color) {
         this.tooltip = tooltip;
         this.color = color;
     }
@@ -49,9 +48,10 @@ public final class PlayerArgumentType implements CustomArgumentType.Converted<Pl
     }
 
     /**
-     * Creates a new PlayerArgumentType with no tooltip.
+     * Creates a new PlayerArgumentType with default tooltip ("Click to choose <player>") and color (166, 233, 255).
      */
     public PlayerArgumentType() {
+        this("Click to choose <player>", TextColor.color(166, 233, 255));
     }
 
     /**
@@ -80,7 +80,7 @@ public final class PlayerArgumentType implements CustomArgumentType.Converted<Pl
      * @param color   The color of the tooltip.
      * @return A new PlayerArgumentType instance.
      */
-    public static @NotNull PlayerArgumentType player(@NotNull String tooltip, @Nullable TextColor color) {
+    public static @NotNull PlayerArgumentType player(@NotNull String tooltip, @NotNull TextColor color) {
         return new PlayerArgumentType(tooltip, color);
     }
 
@@ -116,14 +116,16 @@ public final class PlayerArgumentType implements CustomArgumentType.Converted<Pl
 
     @Override
     public <S> @NotNull CompletableFuture<Suggestions> listSuggestions(@NotNull CommandContext<S> context, @NotNull SuggestionsBuilder builder) {
-        Bukkit.getOnlinePlayers()
-                .parallelStream()
-                .forEach(player -> {
-                    if (tooltip == null) builder.suggest(player.getName());
-                    else builder.suggest(player.getName(), MessageComponentSerializer.message()
+        try {
+            Bukkit.getOnlinePlayers()
+                    .parallelStream()
+                    .filter(player -> player.getName().startsWith(builder.getInput().substring(builder.getInput().lastIndexOf(" ") + 1)))
+                    .forEach(player -> builder.suggest(player.getName(), MessageComponentSerializer.message()
                             .serialize(Component.text(tooltip.replaceAll("<player>", player.getName()))
-                                    .color(color)));
-                });
-        return builder.buildFuture();
+                                    .color(color))));
+            return builder.buildFuture();
+        } catch (@NotNull Exception e) {
+            return Suggestions.empty();
+        }
     }
 }

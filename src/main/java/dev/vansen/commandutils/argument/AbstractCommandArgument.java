@@ -50,6 +50,9 @@ public abstract class AbstractCommandArgument {
     public void consoleExecute(@NotNull CommandWrapper context) {
     }
 
+    public void remoteConsoleExecute(@NotNull CommandWrapper context) {
+    }
+
     public void entityExecute(@NotNull CommandWrapper context) {
     }
 
@@ -107,46 +110,37 @@ public abstract class AbstractCommandArgument {
                     arg.defaultExecute(this::execute);
                 }
             }
-        } catch (NoSuchMethodException ignored) {
-        }
 
-        try {
             Method playerExecuteMethod = this.getClass().getDeclaredMethod("playerExecute", CommandWrapper.class);
             Method superPlayerExecuteMethod = AbstractCommandArgument.class.getDeclaredMethod("playerExecute", CommandWrapper.class);
             if (!playerExecuteMethod.equals(superPlayerExecuteMethod)) {
                 arg.playerExecute(this::playerExecute);
             }
-        } catch (NoSuchMethodException ignored) {
-        }
 
-        try {
             Method consoleExecuteMethod = this.getClass().getDeclaredMethod("consoleExecute", CommandWrapper.class);
             Method superConsoleExecuteMethod = AbstractCommandArgument.class.getDeclaredMethod("consoleExecute", CommandWrapper.class);
             if (!consoleExecuteMethod.equals(superConsoleExecuteMethod)) {
                 arg.consoleExecute(this::consoleExecute);
             }
-        } catch (NoSuchMethodException ignored) {
-        }
 
-        try {
+            Method remoteConsoleExecuteMethod = this.getClass().getDeclaredMethod("remoteConsoleExecute", CommandWrapper.class);
+            Method superRemoteConsoleExecuteMethod = AbstractCommandArgument.class.getDeclaredMethod("remoteConsoleExecute", CommandWrapper.class);
+            if (!remoteConsoleExecuteMethod.equals(superRemoteConsoleExecuteMethod)) {
+                arg.remoteConsoleExecute(this::remoteConsoleExecute);
+            }
+
             Method entityExecuteMethod = this.getClass().getDeclaredMethod("entityExecute", CommandWrapper.class);
             Method superEntityExecuteMethod = AbstractCommandArgument.class.getDeclaredMethod("entityExecute", CommandWrapper.class);
             if (!entityExecuteMethod.equals(superEntityExecuteMethod)) {
                 arg.entityExecute(this::entityExecute);
             }
-        } catch (NoSuchMethodException ignored) {
-        }
 
-        try {
             Method blockExecuteMethod = this.getClass().getDeclaredMethod("blockExecute", CommandWrapper.class);
             Method superBlockExecuteMethod = AbstractCommandArgument.class.getDeclaredMethod("blockExecute", CommandWrapper.class);
             if (!blockExecuteMethod.equals(superBlockExecuteMethod)) {
                 arg.blockExecute(this::blockExecute);
             }
-        } catch (NoSuchMethodException ignored) {
-        }
 
-        try {
             Method proxiedExecuteMethod = this.getClass().getDeclaredMethod("proxiedExecute", CommandWrapper.class);
             Method superProxiedExecuteMethod = AbstractCommandArgument.class.getDeclaredMethod("proxiedExecute", CommandWrapper.class);
             if (!proxiedExecuteMethod.equals(superProxiedExecuteMethod)) {

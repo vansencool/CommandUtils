@@ -6,11 +6,13 @@ import org.jetbrains.annotations.NotNull;
 public enum MessageTypes {
     PLAYER_EXCEPTION("<color:#ff4060>Exception: You must be a player to execute this command!</color>", SendType.MESSAGE),
     CONSOLE_EXCEPTION("<color:#ff4060>Exception: You must execute this command from the console!</color>", SendType.MESSAGE),
+    REMOTE_CONSOLE_EXCEPTION("<color:#ff4060>Exception: You must execute this command as a remote console!</color>", SendType.MESSAGE),
     ENTITY_EXCEPTION("<color:#ff4060>Exception: You must be an entity to execute this command!</color>", SendType.MESSAGE),
     COMMAND_BLOCK_EXCEPTION("<color:#ff4060>Exception: This can only be executed by a command block!</color>", SendType.MESSAGE),
     PROXIED_SENDER_EXCEPTION("<color:#ff4060>Exception: You must be a proxied command sender to execute this command!</color>", SendType.MESSAGE),
     NOT_ALLOWED_PLAYER("<color:#ff4060>You are not allowed to execute this as a player!</color>", SendType.MESSAGE),
     NOT_ALLOWED_CONSOLE("<color:#ff4060>You are not allowed to execute this from the console!</color>", SendType.MESSAGE),
+    NOT_ALLOWED_REMOTE_CONSOLE("<color:#ff4060>You are not allowed to execute this as a remote console!</color>", SendType.MESSAGE),
     NOT_ALLOWED_ENTITY("<color:#ff4060>You are not allowed to execute this as an entity!</color>", SendType.MESSAGE),
     NOT_ALLOWED_COMMAND_BLOCK("<color:#ff4060>You are not allowed to execute this from a command block!</color>", SendType.MESSAGE),
     NOT_ALLOWED_PROXIED_SENDER("<color:#ff4060>You are not allowed to execute this as a proxied command sender!</color>", SendType.MESSAGE);

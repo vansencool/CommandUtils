@@ -6,25 +6,24 @@ import dev.vansen.commandutils.messages.MessageTypes;
 import dev.vansen.commandutils.sender.SenderTypes;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.World;
-import org.bukkit.command.BlockCommandSender;
-import org.bukkit.command.CommandSender;
-import org.bukkit.command.ConsoleCommandSender;
-import org.bukkit.command.ProxiedCommandSender;
+import org.bukkit.command.*;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.Arrays;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * A wrapper class for managing and accessing command context information within a command execution.
@@ -72,6 +71,26 @@ public record CommandWrapper(CommandContext<CommandSourceStack> context) {
     @Nullable
     public Entity entity() {
         return context.getSource().getExecutor();
+    }
+
+    /**
+     * Retrieves the {@link ConsoleCommandSender} who executed the command.
+     *
+     * @return the console command sender who executed the command, can be null if the sender is not a console.
+     */
+    @Nullable
+    public ConsoleCommandSender console() {
+        return context.getSource().getSender() instanceof ConsoleCommandSender sender ? sender : null;
+    }
+
+    /**
+     * Retrieves the {@link RemoteConsoleCommandSender} who executed the command.
+     *
+     * @return the remote console command sender who executed the command, can be null if the sender is not a remote console.
+     */
+    @Nullable
+    public RemoteConsoleCommandSender remoteConsole() {
+        return context.getSource().getSender() instanceof RemoteConsoleCommandSender sender ? sender : null;
     }
 
     /**
@@ -176,7 +195,7 @@ public record CommandWrapper(CommandContext<CommandSourceStack> context) {
     public void response(@Nullable MessageTypes message) {
         if (message == null) return;
         switch (message.type()) {
-            case MESSAGE -> sender().sendMessage(message.message());
+            case MESSAGE -> sender().sendRichMessage(message.message());
             case ACTION_BAR -> sender().sendActionBar(MiniMessage.miniMessage().deserializeOrNull(message.message()));
         }
     }
@@ -229,6 +248,33 @@ public record CommandWrapper(CommandContext<CommandSourceStack> context) {
     }
 
     /**
+     * Helper method to get input as a list.
+     *
+     * @return A list of strings containing the input in the command, separated by spaces.
+     */
+    public List<String> inputAsList() {
+        return Arrays.asList(input().split(" "));
+    }
+
+    /**
+     * Helper method to get input as an array.
+     *
+     * @return An array of strings containing the input in the command, separated by spaces.
+     */
+    public String[] inputAsArray() {
+        return input().split(" ");
+    }
+
+    /**
+     * Helper method to get input as a stream.
+     *
+     * @return A stream of strings containing the input in the command, separated by spaces.
+     */
+    public Stream<String> inputAsStream() {
+        return Arrays.stream(input().split(" "));
+    }
+
+    /**
      * Helper method to get arguments after a given index.
      * Automatically parses the input to get the arguments in the command.
      *
@@ -253,6 +299,293 @@ public record CommandWrapper(CommandContext<CommandSourceStack> context) {
         return Arrays.asList(context.getInput()
                         .split(" "))
                 .remove(flag);
+    }
+
+    /**
+     * Helper method to check if a flag exists multiple times in the input.
+     *
+     * @param flag The flag to check.
+     * @return True if the flag exists multiple times, false otherwise.
+     */
+    public boolean hasFlagMultipleTimes(@NotNull String flag) {
+        AtomicInteger count = new AtomicInteger();
+        inputAsStream()
+                .forEach(arg -> {
+                    if (arg.equals(flag)) count.incrementAndGet();
+                });
+        return count.get() > 1;
+    }
+
+    /**
+     * Helper method to get the number of times a flag exists in the input.
+     *
+     * @param flag The flag to check.
+     * @return The number of times the flag exists in the input.
+     */
+    public int numberOfFlags(@NotNull String flag) {
+        AtomicInteger count = new AtomicInteger();
+        inputAsStream()
+                .forEach(arg -> {
+                    if (arg.equals(flag)) count.incrementAndGet();
+                });
+        return count.get();
+    }
+
+    /**
+     * Helper method to get the value of a flag, like "/example --flag some_value".
+     *
+     * @param flag The flag to get the value of.
+     * @return The value of the flag, or an empty string if the flag does not exist.
+     */
+    public String parameterForFlag(@NotNull String flag) {
+        String[] args = input().split(" ");
+        for (int i = 0; i < args.length; i++) {
+            if (args[i].equals(flag)) {
+                return args[i + 1];
+            }
+        }
+        return "";
+    }
+
+    /**
+     * Helper method to check if a flag exists in the input.
+     *
+     * @param flag The flag to check.
+     * @return True if the flag exists, false otherwise.
+     */
+    public boolean hasFlags(@NotNull String flag) {
+        return inputAsStream()
+                .anyMatch(arg -> arg.startsWith(flag));
+    }
+
+    /**
+     * Helper method to check if multiple flags exist in the input.
+     *
+     * @param flags The flags to check.
+     * @return True if all flags exist, false otherwise.
+     */
+    public boolean hasFlags(@NotNull String... flags) {
+        return Arrays.stream(flags)
+                .anyMatch(this::hasFlags);
+    }
+
+    /**
+     * Helper method to check if multiple flags exist in the input.
+     *
+     * @param flags The flags to check.
+     * @return True if all flags exist, false otherwise.
+     */
+    public boolean hasFlags(@NotNull Collection<String> flags) {
+        return flags.stream()
+                .anyMatch(this::hasFlags);
+    }
+
+    /**
+     * Helper method to check if any flag exists in the input that starts with a hyphen or double hyphen (- or --).
+     *
+     * @return True if any flag exists, false otherwise.
+     */
+    public boolean hasFlags() {
+        return inputAsStream()
+                .anyMatch(arg -> arg.startsWith("--") || arg.startsWith("-"));
+    }
+
+    /**
+     * Helper method to get all flags starting with any of the given prefixes.
+     *
+     * @param prefixes The prefixes of the flags to retrieve.
+     * @return A list of strings containing the flags starting with the given prefix.
+     */
+    public List<String> flagsStarting(@NotNull String... prefixes) {
+        return inputAsStream()
+                .filter(arg -> Arrays.stream(prefixes)
+                        .anyMatch(arg::startsWith))
+                .toList();
+    }
+
+    /**
+     * Helper method to get all flags ending with a given suffix.
+     *
+     * @param suffix The suffix of the flags to retrieve.
+     * @return A list of strings containing the flags ending with the given suffix.
+     */
+    public List<String> flagsEnding(@NotNull String suffix) {
+        return inputAsStream()
+                .filter(arg -> arg.endsWith(suffix))
+                .toList();
+    }
+
+    /**
+     * Helper method to get all flags containing a given substring.
+     *
+     * @param substring The substring of the flags to retrieve.
+     * @return A list of strings containing the flags containing the given substring.
+     */
+    public List<String> flagsContaining(@NotNull String substring) {
+        return inputAsStream()
+                .filter(arg -> arg.contains(substring))
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Helper method to get the input without flags that starts with a hyphen or double hyphen (- or --).
+     *
+     * @return A string containing the input without flags.
+     */
+    public String inputWithoutFlags() {
+        return String.join(" ", inputAsStream()
+                .filter(arg -> !arg.startsWith("--") && !arg.startsWith("-"))
+                .toArray(String[]::new));
+    }
+
+    /**
+     * Helper method to get the input without flags that starts with any of the given prefixes.
+     *
+     * @param prefixes The prefixes of the flags to retrieve.
+     * @return A string containing the input without flags.
+     */
+    public String inputWithoutFlags(@NotNull String... prefixes) {
+        return String.join(" ", inputAsStream()
+                .filter(arg -> Arrays.stream(prefixes).noneMatch(arg::startsWith))
+                .toArray(String[]::new));
+    }
+
+    /**
+     * Helper method to get the input without flags that starts with any of the given prefixes.
+     *
+     * @param prefixes The prefixes of the flags to retrieve.
+     * @return A string containing the input without flags.
+     */
+    public String inputWithoutFlags(@NotNull Collection<String> prefixes) {
+        return inputWithoutFlags(prefixes.toArray(new String[0]));
+    }
+
+    /**
+     * Helper method to get the input without the command itself.
+     *
+     * @return A string containing the input without the command itself.
+     */
+    public String inputWithoutCommand() {
+        return String.join(" ", inputAsStream()
+                .skip(1)
+                .toArray(String[]::new));
+    }
+
+    /**
+     * Helper method to get the number of flags.
+     *
+     * @return The number of flags in the command.
+     */
+    public int flagCount() {
+        return flagsStarting("--").size() + flagsStarting("-").size();
+    }
+
+    /**
+     * Helper method to get the number of flags starting with a given prefix.
+     *
+     * @param prefixes The prefixes of the flags to retrieve.
+     * @return The number of flags starting with the given prefix.
+     */
+    public int flagCount(@NotNull String... prefixes) {
+        return flagsStarting(prefixes).size();
+    }
+
+    /**
+     * Helper method to get the first flag.
+     *
+     * @return The first flag in the command, or an empty string if not found.
+     */
+    public String firstFlag() {
+        try {
+            return flagsStarting("--")
+                    .getFirst();
+        } catch (@NotNull NoSuchElementException e) {
+            try {
+                return flagsStarting("-")
+                        .getFirst();
+            } catch (@NotNull NoSuchElementException ignored) {
+                return "";
+            }
+        }
+    }
+
+    /**
+     * Helper method to get the first flag starting with a given prefix.
+     *
+     * @param prefixes The prefixes of the flags to retrieve.
+     * @return The first flag starting with the given prefix, or an empty string if not found.
+     */
+    public String firstFlag(@NotNull String... prefixes) {
+        try {
+            return flagsStarting(prefixes)
+                    .getFirst();
+        } catch (@NotNull NoSuchElementException ignored) {
+            return "";
+        }
+    }
+
+    /**
+     * Helper method to get the first flag starting with a given prefix.
+     *
+     * @param prefixes The prefixes of the flags to retrieve.
+     * @return The first flag starting with the given prefix, or an empty string if not found.
+     */
+    public String firstFlag(@NotNull Collection<String> prefixes) {
+        return firstFlag(prefixes.toArray(new String[0]));
+    }
+
+    /**
+     * Helper method to get the last flag.
+     *
+     * @return The last flag in the command, or an empty string if not found.
+     */
+    public String lastFlag() {
+        try {
+            return flagsStarting("--")
+                    .getLast();
+        } catch (@NotNull NoSuchElementException e) {
+            try {
+                return flagsStarting("-")
+                        .getLast();
+            } catch (@NotNull NoSuchElementException ignored) {
+                return "";
+            }
+        }
+    }
+
+    /**
+     * Helper method to get the last flag starting with a given prefix.
+     *
+     * @param prefixes The prefixes of the flags to retrieve.
+     * @return The last flag starting with the given prefix, or an empty string if not found.
+     */
+    public String lastFlag(@NotNull String... prefixes) {
+        try {
+            return flagsStarting(prefixes)
+                    .getLast();
+        } catch (@NotNull NoSuchElementException ignored) {
+            return "";
+        }
+    }
+
+    /**
+     * Helper method to get the last flag starting with a given prefix.
+     *
+     * @param prefixes The prefixes of the flags to retrieve.
+     * @return The last flag starting with the given prefix, or an empty string if not found.
+     */
+    public String lastFlag(@NotNull Collection<String> prefixes) {
+        return lastFlag(prefixes.toArray(new String[0]));
+    }
+
+    /**
+     * Helper method to get the number of flags starting with a given prefix.
+     *
+     * @param prefixes The prefixes of the flags to retrieve.
+     * @return The number of flags starting with the given prefix.
+     */
+    public int flagCount(@NotNull Collection<String> prefixes) {
+        return flagCount(prefixes.toArray(new String[0]));
     }
 
     /**
@@ -376,6 +709,16 @@ public record CommandWrapper(CommandContext<CommandSourceStack> context) {
      */
     public Player argPlayer(@NotNull String arg) {
         return context.getArgument(arg, Player.class);
+    }
+
+    /**
+     * Retrieves a command argument by its name and converts it to a color.
+     *
+     * @param arg the name of the argument.
+     * @return the argument value converted to a color.
+     */
+    public TextColor argColor(@NotNull String arg) {
+        return context.getArgument(arg, TextColor.class);
     }
 
     /**
@@ -515,14 +858,31 @@ public record CommandWrapper(CommandContext<CommandSourceStack> context) {
     }
 
     /**
+     * Retrieves a command argument by its name and converts it to a text color.
+     * If the argument is not present or invalid, returns the default value.
+     *
+     * @param arg the name of the argument.
+     * @param def the default value to return if the argument is not present.
+     * @return the argument value converted to a text color, or the default value if not present or invalid.
+     */
+    public TextColor argColor(@NotNull String arg, @Nullable TextColor def) {
+        try {
+            return argColor(arg);
+        } catch (Exception e) {
+            return def;
+        }
+    }
+
+    /**
      * Retrieves the plain sender type of the given context.
      *
-     * @return the plain sender type, can be "player", "console", "entity", "command_block", "proxied_sender" or "unknown".
+     * @return the plain sender type, can be "player", "console", "remote_console", "entity", "command_block", "proxied_sender" or "unknown".
      */
     public String plainSender() {
         return switch (senderType()) {
             case PLAYER -> "player";
             case CONSOLE -> "console";
+            case REMOTE_CONSOLE -> "remote_console";
             case ENTITY -> "entity";
             case COMMAND_BLOCK -> "command_block";
             case PROXIED -> "proxied_sender";
@@ -533,12 +893,13 @@ public record CommandWrapper(CommandContext<CommandSourceStack> context) {
     /**
      * Retrieves the friendly sender type of the given context.
      *
-     * @return the friendly sender type, can be "Player", "Console", "Entity", "Command Block", "Proxied Command Sender" or "Unknown".
+     * @return the friendly sender type, can be "Player", "Console", "Remote Console", "Entity", "Command Block", "Proxied Command Sender" or "Unknown".
      */
     public String friendlySender() {
         return switch (senderType()) {
             case PLAYER -> "Player";
             case CONSOLE -> "Console";
+            case REMOTE_CONSOLE -> "Remote Console";
             case ENTITY -> "Entity";
             case COMMAND_BLOCK -> "Command Block";
             case PROXIED -> "Proxied Command Sender";
@@ -562,6 +923,15 @@ public record CommandWrapper(CommandContext<CommandSourceStack> context) {
      */
     public boolean isConsole() {
         return senderType() == SenderTypes.CONSOLE;
+    }
+
+    /**
+     * Checks if the sender is a remote console.
+     *
+     * @return true if the sender is a remote console, false otherwise.
+     */
+    public boolean isRemoteConsole() {
+        return senderType() == SenderTypes.REMOTE_CONSOLE;
     }
 
     /**
@@ -597,21 +967,12 @@ public record CommandWrapper(CommandContext<CommandSourceStack> context) {
      * @return the sender type.
      */
     public SenderTypes senderType() {
-        if (sender() instanceof Player) {
-            return SenderTypes.PLAYER;
-        }
-        if (sender() instanceof ConsoleCommandSender) {
-            return SenderTypes.CONSOLE;
-        }
-        if (sender() instanceof Entity) {
-            return SenderTypes.ENTITY;
-        }
-        if (sender() instanceof BlockCommandSender) {
-            return SenderTypes.COMMAND_BLOCK;
-        }
-        if (sender() instanceof ProxiedCommandSender) {
-            return SenderTypes.PROXIED;
-        }
+        if (sender() instanceof Player) return SenderTypes.PLAYER;
+        if (sender() instanceof ConsoleCommandSender) return SenderTypes.CONSOLE;
+        if (sender() instanceof RemoteConsoleCommandSender) return SenderTypes.REMOTE_CONSOLE;
+        if (sender() instanceof Entity) return SenderTypes.ENTITY;
+        if (sender() instanceof BlockCommandSender) return SenderTypes.COMMAND_BLOCK;
+        if (sender() instanceof ProxiedCommandSender) return SenderTypes.PROXIED;
         return SenderTypes.UNKNOWN;
     }
 
@@ -624,6 +985,19 @@ public record CommandWrapper(CommandContext<CommandSourceStack> context) {
      */
     public void throwIf(@NotNull Predicate<CommandWrapper> predicate, @NotNull String message) {
         if (predicate.test(this)) {
+            throw new CmdException(message, sender());
+        }
+    }
+
+    /**
+     * Throws a {@link CmdException} with the given message if the given predicate is true.
+     *
+     * @param predicate the predicate to evaluate
+     * @param message   the message to include in the exception
+     * @throws CmdException if the predicate is true
+     */
+    public void throwIf(@NotNull BooleanChecker predicate, @NotNull String message) {
+        if (predicate.check()) {
             throw new CmdException(message, sender());
         }
     }
@@ -642,6 +1016,19 @@ public record CommandWrapper(CommandContext<CommandSourceStack> context) {
     }
 
     /**
+     * Throws a {@link CmdException} with the given message if the given predicate is false.
+     *
+     * @param predicate the predicate to evaluate
+     * @param message   the message to include in the exception
+     * @throws CmdException if the predicate is false
+     */
+    public void throwIfNot(@NotNull BooleanChecker predicate, @NotNull String message) {
+        if (!predicate.check()) {
+            throw new CmdException(message, sender());
+        }
+    }
+
+    /**
      * Throws a {@link CmdException} with the given component message if the given predicate is true.
      *
      * @param predicate the predicate to evaluate
@@ -655,6 +1042,19 @@ public record CommandWrapper(CommandContext<CommandSourceStack> context) {
     }
 
     /**
+     * Throws a {@link CmdException} with the given component message if the given predicate is true.
+     *
+     * @param predicate the predicate to evaluate
+     * @param message   the component message to include in the exception
+     * @throws CmdException if the predicate is true
+     */
+    public void throwIf(@NotNull BooleanChecker predicate, @NotNull Component message) {
+        if (predicate.check()) {
+            throw new CmdException(message, sender());
+        }
+    }
+
+    /**
      * Throws a {@link CmdException} with the given component message if the given predicate is false.
      *
      * @param predicate the predicate to evaluate
@@ -663,6 +1063,19 @@ public record CommandWrapper(CommandContext<CommandSourceStack> context) {
      */
     public void throwIfNot(@NotNull Predicate<CommandWrapper> predicate, @NotNull Component message) {
         if (!predicate.test(this)) {
+            throw new CmdException(message, sender());
+        }
+    }
+
+    /**
+     * Throws a {@link CmdException} with the given component message if the given predicate is false.
+     *
+     * @param predicate the predicate to evaluate
+     * @param message   the component message to include in the exception
+     * @throws CmdException if the predicate is false
+     */
+    public void throwIfNot(@NotNull BooleanChecker predicate, @NotNull Component message) {
+        if (!predicate.check()) {
             throw new CmdException(message, sender());
         }
     }
@@ -682,6 +1095,20 @@ public record CommandWrapper(CommandContext<CommandSourceStack> context) {
     }
 
     /**
+     * Throws a {@link CmdException} with the given runnable if the given predicate is true.
+     *
+     * @param predicate the predicate to evaluate
+     * @param runnable  the runnable to run if the predicate is true
+     * @throws CmdException if the predicate is true
+     */
+    public void throwAndRunIf(@NotNull BooleanChecker predicate, @NotNull Runnable runnable) {
+        if (predicate.check()) {
+            runnable.run();
+            check(c -> false);
+        }
+    }
+
+    /**
      * Throws a {@link CmdException} with the given runnable if the given predicate is false.
      *
      * @param predicate the predicate to evaluate
@@ -690,6 +1117,20 @@ public record CommandWrapper(CommandContext<CommandSourceStack> context) {
      */
     public void throwAndRunIfNot(@NotNull Predicate<CommandWrapper> predicate, @NotNull Runnable runnable) {
         if (!predicate.test(this)) {
+            runnable.run();
+            check(c -> false);
+        }
+    }
+
+    /**
+     * Throws a {@link CmdException} with the given runnable if the given predicate is false.
+     *
+     * @param predicate the predicate to evaluate
+     * @param runnable  the runnable to run if the predicate is false
+     * @throws CmdException if the predicate is false
+     */
+    public void throwAndRunIfNot(@NotNull BooleanChecker predicate, @NotNull Runnable runnable) {
+        if (!predicate.check()) {
             runnable.run();
             check(c -> false);
         }
@@ -718,6 +1159,18 @@ public record CommandWrapper(CommandContext<CommandSourceStack> context) {
     }
 
     /**
+     * Runs the given runnable if the given predicate is true.
+     *
+     * @param predicate the predicate to evaluate
+     * @param runnable  the runnable to run if the predicate is true
+     */
+    public void runIf(@NotNull BooleanChecker predicate, @NotNull Runnable runnable) {
+        if (predicate.check()) {
+            runnable.run();
+        }
+    }
+
+    /**
      * Runs the given runnable if the given predicate is false.
      *
      * @param predicate the predicate to evaluate
@@ -730,37 +1183,25 @@ public record CommandWrapper(CommandContext<CommandSourceStack> context) {
     }
 
     /**
+     * Runs the given runnable if the given predicate is false.
+     *
+     * @param predicate the predicate to evaluate
+     * @param runnable  the runnable to run if the predicate is false
+     */
+    public void runIfNot(@NotNull BooleanChecker predicate, @NotNull Runnable runnable) {
+        if (!predicate.check()) {
+            runnable.run();
+        }
+    }
+
+    /**
      * Checks whether the command sender meets the specified condition.
      *
      * @param type the type of check to be performed.
      * @throws CmdException if the check fails.
      */
     public void check(@NotNull CheckType type) {
-        Optional.of(type)
-                .filter(t -> t == CheckType.PLAYER && !isPlayer())
-                .ifPresent(t -> {
-                    throw new CmdException(MessageTypes.PLAYER_EXCEPTION, sender());
-                });
-        Optional.of(type)
-                .filter(t -> t == CheckType.CONSOLE && !isConsole())
-                .ifPresent(t -> {
-                    throw new CmdException(MessageTypes.CONSOLE_EXCEPTION, sender());
-                });
-        Optional.of(type)
-                .filter(t -> t == CheckType.ENTITY && !isEntity())
-                .ifPresent(t -> {
-                    throw new CmdException(MessageTypes.ENTITY_EXCEPTION, sender());
-                });
-        Optional.of(type)
-                .filter(t -> t == CheckType.COMMAND_BLOCK && !isBlock())
-                .ifPresent(t -> {
-                    throw new CmdException(MessageTypes.COMMAND_BLOCK_EXCEPTION, sender());
-                });
-        Optional.of(type)
-                .filter(t -> t == CheckType.PROXIED_SENDER && !isProxied())
-                .ifPresent(t -> {
-                    throw new CmdException(MessageTypes.PROXIED_SENDER_EXCEPTION, sender());
-                });
+        SenderTypes.valueOf(type.name()).check(this);
     }
 
     /**
@@ -773,6 +1214,7 @@ public record CommandWrapper(CommandContext<CommandSourceStack> context) {
     public void check(@NotNull CheckType type, @NotNull Runnable task) {
         if (!(type == CheckType.PLAYER && isPlayer() ||
                 type == CheckType.CONSOLE && isConsole() ||
+                type == CheckType.REMOTE_CONSOLE && isRemoteConsole() ||
                 type == CheckType.ENTITY && isEntity() ||
                 type == CheckType.COMMAND_BLOCK && isBlock() ||
                 type == CheckType.PROXIED_SENDER && isProxied())) {
@@ -789,31 +1231,7 @@ public record CommandWrapper(CommandContext<CommandSourceStack> context) {
      * @throws CmdException if the check fails.
      */
     public void check(@NotNull CheckType type, @NotNull String message) {
-        Optional.of(type)
-                .filter(t -> t == CheckType.PLAYER && !isPlayer())
-                .ifPresent(t -> {
-                    throw new CmdException(message, sender());
-                });
-        Optional.of(type)
-                .filter(t -> t == CheckType.CONSOLE && !isConsole())
-                .ifPresent(t -> {
-                    throw new CmdException(message, sender());
-                });
-        Optional.of(type)
-                .filter(t -> t == CheckType.ENTITY && !isEntity())
-                .ifPresent(t -> {
-                    throw new CmdException(message, sender());
-                });
-        Optional.of(type)
-                .filter(t -> t == CheckType.COMMAND_BLOCK && !isBlock())
-                .ifPresent(t -> {
-                    throw new CmdException(message, sender());
-                });
-        Optional.of(type)
-                .filter(t -> t == CheckType.PROXIED_SENDER && !isProxied())
-                .ifPresent(t -> {
-                    throw new CmdException(message, sender());
-                });
+        SenderTypes.valueOf(type.name()).check(this, message);
     }
 
     /**
@@ -825,6 +1243,19 @@ public record CommandWrapper(CommandContext<CommandSourceStack> context) {
      */
     public void check(@NotNull Predicate<CommandWrapper> check) {
         if (!check.test(this)) {
+            throw new CmdException((Component) null, null);
+        }
+    }
+
+    /**
+     * Adds a custom check to the command.
+     * If the check fails, a CmdException is thrown.
+     *
+     * @param check the custom check to add
+     * @throws CmdException if the check fails
+     */
+    public void check(@NotNull BooleanChecker check) {
+        if (!check.check()) {
             throw new CmdException((Component) null, null);
         }
     }
@@ -851,8 +1282,36 @@ public record CommandWrapper(CommandContext<CommandSourceStack> context) {
      * @param message the custom message to be sent if the check fails
      * @throws CmdException if the check fails
      */
+    public void check(@NotNull BooleanChecker check, @NotNull String message) {
+        if (!check.check()) {
+            throw new CmdException(message, sender());
+        }
+    }
+
+    /**
+     * Adds a custom check to the command.
+     * If the check fails, a CmdException is thrown.
+     *
+     * @param check   the custom check to add
+     * @param message the custom message to be sent if the check fails
+     * @throws CmdException if the check fails
+     */
     public void check(@NotNull Predicate<CommandWrapper> check, @NotNull Component message) {
         if (!check.test(this)) {
+            throw new CmdException(message, sender());
+        }
+    }
+
+    /**
+     * Adds a custom check to the command.
+     * If the check fails, a CmdException is thrown.
+     *
+     * @param check   the custom check to add
+     * @param message the custom message to be sent if the check fails
+     * @throws CmdException if the check fails
+     */
+    public void check(@NotNull BooleanChecker check, @NotNull Component message) {
+        if (!check.check()) {
             throw new CmdException(message, sender());
         }
     }
@@ -867,7 +1326,21 @@ public record CommandWrapper(CommandContext<CommandSourceStack> context) {
     public void check(@NotNull Predicate<CommandWrapper> check, @NotNull Runnable task) {
         if (!check.test(this)) {
             task.run();
-            check(c -> false);
+            check(() -> false);
+        }
+    }
+
+    /**
+     * Adds a custom check to the command.
+     * If the check fails, the specified task is executed.
+     *
+     * @param check the custom check to add
+     * @param task  the task to execute if the check fails
+     */
+    public void check(@NotNull BooleanChecker check, @NotNull Runnable task) {
+        if (!check.check()) {
+            task.run();
+            check(() -> false);
         }
     }
 

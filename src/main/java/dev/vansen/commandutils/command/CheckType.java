@@ -18,6 +18,11 @@ public enum CheckType {
     CONSOLE,
 
     /**
+     * Represents a check to ensure the sender is a remote console.
+     */
+    REMOTE_CONSOLE,
+
+    /**
      * Represents a check to ensure the sender is an entity (such as a mob).
      */
     ENTITY,

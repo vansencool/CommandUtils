@@ -4,6 +4,7 @@ import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.mojang.brigadier.Message;
 import io.papermc.paper.command.brigadier.MessageComponentSerializer;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -40,7 +41,7 @@ public final class Suggestion {
      */
     public Suggestion(@NotNull String text, @NotNull String tooltip) {
         this.text = text;
-        this.tooltip = MessageComponentSerializer.message().serializeOrNull(Component.text(tooltip));
+        this.tooltip = MessageComponentSerializer.message().serializeOrNull(MiniMessage.miniMessage().deserializeOrNull(tooltip));
     }
 
     /**

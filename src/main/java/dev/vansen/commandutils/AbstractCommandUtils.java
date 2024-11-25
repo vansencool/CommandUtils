@@ -11,6 +11,7 @@ import dev.vansen.commandutils.info.CommandInfo;
 import dev.vansen.commandutils.sender.SenderTypes;
 import dev.vansen.commandutils.subcommand.AbstractSubCommand;
 import dev.vansen.commandutils.subcommand.SubCommand;
+import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 
 import java.lang.reflect.Method;
@@ -40,7 +41,7 @@ public abstract class AbstractCommandUtils {
         this.name = commandName;
         this.aliases = Aliases.of(aliases);
     }
-    
+
     public AbstractCommandUtils(@NotNull String commandName, @NotNull String... aliases) {
         this.name = commandName;
         this.aliases = Aliases.of(aliases);
@@ -57,6 +58,9 @@ public abstract class AbstractCommandUtils {
     }
 
     public void consoleExecute(@NotNull CommandWrapper context) {
+    }
+
+    public void remoteConsoleExecute(@NotNull CommandWrapper context) {
     }
 
     public void entityExecute(@NotNull CommandWrapper context) {
@@ -103,6 +107,7 @@ public abstract class AbstractCommandUtils {
         return Position.LAST; // Adds abstract subcommands at the last.
     }
 
+    @ApiStatus.NonExtendable
     public CommandUtils build() {
         CommandUtils commandUtils = CommandUtils.command(name);
 
@@ -116,46 +121,37 @@ public abstract class AbstractCommandUtils {
                     commandUtils.defaultExecute(this::execute);
                 }
             }
-        } catch (NoSuchMethodException ignored) {
-        }
 
-        try {
             Method playerExecuteMethod = this.getClass().getDeclaredMethod("playerExecute", CommandWrapper.class);
             Method superPlayerExecuteMethod = AbstractCommandUtils.class.getDeclaredMethod("playerExecute", CommandWrapper.class);
             if (!playerExecuteMethod.equals(superPlayerExecuteMethod)) {
                 commandUtils.playerExecute(this::playerExecute);
             }
-        } catch (NoSuchMethodException ignored) {
-        }
 
-        try {
             Method consoleExecuteMethod = this.getClass().getDeclaredMethod("consoleExecute", CommandWrapper.class);
             Method superConsoleExecuteMethod = AbstractCommandUtils.class.getDeclaredMethod("consoleExecute", CommandWrapper.class);
             if (!consoleExecuteMethod.equals(superConsoleExecuteMethod)) {
                 commandUtils.consoleExecute(this::consoleExecute);
             }
-        } catch (NoSuchMethodException ignored) {
-        }
 
-        try {
+            Method remoteConsoleExecuteMethod = this.getClass().getDeclaredMethod("remoteConsoleExecute", CommandWrapper.class);
+            Method superRemoteConsoleExecuteMethod = AbstractCommandUtils.class.getDeclaredMethod("remoteConsoleExecute", CommandWrapper.class);
+            if (!remoteConsoleExecuteMethod.equals(superRemoteConsoleExecuteMethod)) {
+                commandUtils.remoteConsoleExecute(this::remoteConsoleExecute);
+            }
+
             Method entityExecuteMethod = this.getClass().getDeclaredMethod("entityExecute", CommandWrapper.class);
             Method superEntityExecuteMethod = AbstractCommandUtils.class.getDeclaredMethod("entityExecute", CommandWrapper.class);
             if (!entityExecuteMethod.equals(superEntityExecuteMethod)) {
                 commandUtils.entityExecute(this::entityExecute);
             }
-        } catch (NoSuchMethodException ignored) {
-        }
 
-        try {
             Method blockExecuteMethod = this.getClass().getDeclaredMethod("blockExecute", CommandWrapper.class);
             Method superBlockExecuteMethod = AbstractCommandUtils.class.getDeclaredMethod("blockExecute", CommandWrapper.class);
             if (!blockExecuteMethod.equals(superBlockExecuteMethod)) {
                 commandUtils.blockExecute(this::blockExecute);
             }
-        } catch (NoSuchMethodException ignored) {
-        }
 
-        try {
             Method proxiedExecuteMethod = this.getClass().getDeclaredMethod("proxiedExecute", CommandWrapper.class);
             Method superProxiedExecuteMethod = AbstractCommandUtils.class.getDeclaredMethod("proxiedExecute", CommandWrapper.class);
             if (!proxiedExecuteMethod.equals(superProxiedExecuteMethod)) {
@@ -202,6 +198,7 @@ public abstract class AbstractCommandUtils {
         return commandUtils;
     }
 
+    @ApiStatus.NonExtendable
     public void register() {
         build().register(); // easier
     }

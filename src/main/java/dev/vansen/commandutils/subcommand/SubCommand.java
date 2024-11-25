@@ -17,10 +17,7 @@ import dev.vansen.commandutils.messages.MessageTypes;
 import dev.vansen.commandutils.permission.CommandPermission;
 import dev.vansen.commandutils.sender.SenderTypes;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
-import org.bukkit.command.BlockCommandSender;
-import org.bukkit.command.CommandSender;
-import org.bukkit.command.ConsoleCommandSender;
-import org.bukkit.command.ProxiedCommandSender;
+import org.bukkit.command.*;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
@@ -31,7 +28,7 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Represents a subcommand in the command system.
+ * Represents a subcommand in a command.
  * Subcommands are individual command branches with their own execution logic and arguments.
  */
 @SuppressWarnings({"unused", "UnstableApiUsage"})
@@ -42,6 +39,7 @@ public final class SubCommand {
     private CommandExecutor defaultExecutor;
     private CommandExecutor playerExecutor;
     private CommandExecutor consoleExecutor;
+    private CommandExecutor remoteConsoleExecutor;
     private CommandExecutor entityExecutor;
     private CommandExecutor blockExecutor;
     private CommandExecutor proxiedExecutor;
@@ -71,41 +69,56 @@ public final class SubCommand {
         builder.executes(context -> {
             CommandSender sender = context.getSource().getSender();
             CommandWrapper wrapped = new CommandWrapper(context);
+            boolean done = false;
 
             try {
                 switch (sender) {
-                    case Player player when playerExecutor != null -> playerExecutor.execute(wrapped);
-                    case ConsoleCommandSender consoleCommandSender when consoleExecutor != null ->
-                            consoleExecutor.execute(wrapped);
-                    case BlockCommandSender blockCommandSender when blockExecutor != null ->
-                            blockExecutor.execute(wrapped);
+                    case Player player when playerExecutor != null -> {
+                        done = true;
+                        playerExecutor.execute(wrapped);
+                    }
+                    case ConsoleCommandSender consoleCommandSender when consoleExecutor != null -> {
+                        done = true;
+                        consoleExecutor.execute(wrapped);
+                    }
+                    case BlockCommandSender blockCommandSender when blockExecutor != null -> {
+                        done = true;
+                        blockExecutor.execute(wrapped);
+                    }
                     default -> {
                         switch (context.getSource().getExecutor()) {
-                            case null -> {
+                            case Entity entity when entityExecutor != null -> {
+                                done = true;
+                                entityExecutor.execute(wrapped);
                             }
-                            case Entity entity when entityExecutor != null -> entityExecutor.execute(wrapped);
-                            case ProxiedCommandSender proxiedCommandSender when proxiedExecutor != null ->
-                                    proxiedExecutor.execute(wrapped);
-                            default -> Optional.ofNullable(defaultExecutor)
-                                    .ifPresent(executor -> {
-                                        if (senderTypes == null) executor.execute(wrapped);
-                                        else if (Arrays.stream(senderTypes)
-                                                .anyMatch(type -> type == wrapped.senderType()))
-                                            executor.execute(wrapped);
-                                        else {
-                                            switch (wrapped.senderType()) {
-                                                case PLAYER -> wrapped.response(MessageTypes.NOT_ALLOWED_PLAYER);
-                                                case CONSOLE -> wrapped.response(MessageTypes.NOT_ALLOWED_CONSOLE);
-                                                case ENTITY -> wrapped.response(MessageTypes.NOT_ALLOWED_ENTITY);
-                                                case COMMAND_BLOCK ->
-                                                        wrapped.response(MessageTypes.NOT_ALLOWED_COMMAND_BLOCK);
-                                                case PROXIED ->
-                                                        wrapped.response(MessageTypes.NOT_ALLOWED_PROXIED_SENDER);
-                                            }
-                                        }
-                                    });
+                            case ProxiedCommandSender proxiedCommandSender when proxiedExecutor != null -> {
+                                done = true;
+                                proxiedExecutor.execute(wrapped);
+                            }
+                            case null, default -> {
+                            }
                         }
                     }
+                }
+                if (!done) {
+                    Optional.ofNullable(defaultExecutor)
+                            .ifPresent(executor -> {
+                                if (senderTypes == null) executor.execute(wrapped);
+                                else if (Arrays.stream(senderTypes)
+                                        .anyMatch(type -> type == wrapped.senderType()))
+                                    executor.execute(wrapped);
+                                else {
+                                    switch (wrapped.senderType()) {
+                                        case PLAYER -> wrapped.response(MessageTypes.NOT_ALLOWED_PLAYER);
+                                        case CONSOLE -> wrapped.response(MessageTypes.NOT_ALLOWED_CONSOLE);
+                                        case REMOTE_CONSOLE ->
+                                                wrapped.response(MessageTypes.NOT_ALLOWED_REMOTE_CONSOLE);
+                                        case ENTITY -> wrapped.response(MessageTypes.NOT_ALLOWED_ENTITY);
+                                        case COMMAND_BLOCK -> wrapped.response(MessageTypes.NOT_ALLOWED_COMMAND_BLOCK);
+                                        case PROXIED -> wrapped.response(MessageTypes.NOT_ALLOWED_PROXIED_SENDER);
+                                    }
+                                }
+                            });
                 }
                 return 1;
             } catch (CmdException e) {
@@ -116,7 +129,7 @@ public final class SubCommand {
     }
 
     private void executeIf() {
-        if (defaultExecutor != null || playerExecutor != null || consoleExecutor != null || blockExecutor != null || proxiedExecutor != null) {
+        if (defaultExecutor != null || playerExecutor != null || consoleExecutor != null || remoteConsoleExecutor != null || entityExecutor != null || blockExecutor != null || proxiedExecutor != null) {
             execute();
         }
     }
@@ -153,6 +166,19 @@ public final class SubCommand {
     }
 
     /**
+     * Sets the sender types for the command.
+     *
+     * @param types the {@link SenderTypes} of the sender.
+     * @return this {@link SubCommand} instance for chaining.
+     */
+    @NotNull
+    @CanIgnoreReturnValue
+    public SubCommand senderTypes(@NotNull ExecutableSender types) {
+        this.senderTypes = types.types();
+        return this;
+    }
+
+    /**
      * Sets the executor for the command, but only if the {@link CommandSender} is a {@link Player}.
      * If the sender is not a player, the executor is not called.
      *
@@ -177,6 +203,20 @@ public final class SubCommand {
     @CanIgnoreReturnValue
     public SubCommand consoleExecute(@NotNull CommandExecutor executor) {
         consoleExecutor = executor;
+        return this;
+    }
+
+    /**
+     * Sets the executor for the command, but only if the {@link CommandSender} is a {@link RemoteConsoleCommandSender}.
+     * If the sender is not a remote console, the executor is not called.
+     *
+     * @param executor the {@link CommandExecutor} to be executed if the sender is a remote console.
+     * @return this {@link SubCommand} instance for chaining.
+     */
+    @NotNull
+    @CanIgnoreReturnValue
+    public SubCommand remoteConsoleExecute(@NotNull CommandExecutor executor) {
+        remoteConsoleExecutor = executor;
         return this;
     }
 
