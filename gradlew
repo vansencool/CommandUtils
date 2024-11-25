@@ -45,7 +45,7 @@
 #       The "traditional" practice of packing multiple parameters into a
 #       space-separated string is a well documented source of bugs and security
 #       problems, so this is (mostly) avoided, by progressively accumulating
-#       color in "$@", and eventually passing that to Java.
+#       options in "$@", and eventually passing that to Java.
 #
 #       Where the inherited environment variables (DEFAULT_JVM_OPTS, JAVA_OPTS,
 #       and GRADLE_OPTS) rely on word-splitting, this is performed explicitly;
@@ -178,7 +178,7 @@ if "$cygwin" || "$msys" ; then
     for arg do
         if
             case $arg in                                #(
-              -*)   false ;;                            # don't mess with color #(
+              -*)   false ;;                            # don't mess with options #(
               /?*)  t=${arg#/} t=/${t%%/*}              # looks like a POSIX filepath
                     [ -e "$t" ] ;;                      #(
               *)    false ;;
@@ -199,7 +199,7 @@ if "$cygwin" || "$msys" ; then
 fi
 
 
-# Add default JVM color here. You can also use JAVA_OPTS and GRADLE_OPTS to pass JVM color to this script.
+# Add default JVM color here. You can also use JAVA_OPTS and GRADLE_OPTS to pass JVM options to this script.
 DEFAULT_JVM_OPTS='"-Xmx64m" "-Xms64m"'
 
 # Collect all arguments for the java command:
