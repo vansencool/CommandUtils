@@ -3,6 +3,8 @@ package dev.vansen.commandutils.argument;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.mojang.brigadier.arguments.*;
 import com.mojang.brigadier.builder.RequiredArgumentBuilder;
+import dev.vansen.commandutils.argument.arguments.ColorArgumentType;
+import dev.vansen.commandutils.argument.arguments.PlayerArgumentType;
 import dev.vansen.commandutils.command.CommandExecutor;
 import dev.vansen.commandutils.command.CommandWrapper;
 import dev.vansen.commandutils.command.ExecutableSender;
@@ -244,6 +246,28 @@ public final class CommandArgument {
     @NotNull
     public static CommandArgument longArg(@NotNull String name) {
         return new CommandArgument(name, LongArgumentType.longArg());
+    }
+
+    /**
+     * Creates a new player argument with the specified name.
+     *
+     * @param name the name of the argument.
+     * @return a new {@link CommandArgument} instance representing a player argument.
+     */
+    @NotNull
+    public static CommandArgument player(@NotNull String name) {
+        return new CommandArgument(name, PlayerArgumentType.player());
+    }
+
+    /**
+     * Creates a new color argument with the specified name.
+     *
+     * @param name the name of the argument.
+     * @return a new {@link CommandArgument} instance representing a color argument.
+     */
+    @NotNull
+    public static CommandArgument color(@NotNull String name) {
+        return new CommandArgument(name, ColorArgumentType.color());
     }
 
     /**
@@ -509,23 +533,27 @@ public final class CommandArgument {
 
     /**
      * Adds an argument to the argument.
-     * This method allows required arguments to be added to the command.
      *
      * @param <T>      the type of the argument.
      * @param argument the {@link Argument}
+     * @param handler  the {@link CompletionHandler} for the argument.
      * @return this {@link CommandArgument} instance for chaining.
      */
     @NotNull
     @CanIgnoreReturnValue
-    public <T> CommandArgument argument(@NotNull Argument<T> argument) {
+    public <T> CommandArgument argument(@NotNull Argument<T> argument, @NotNull CompletionHandler handler) {
         RequiredArgumentBuilder<CommandSourceStack, T> arg = RequiredArgumentBuilder.argument(argument.name(), argument.type());
+        arg.suggests((context, builder) -> {
+            CommandWrapper wrapped = new CommandWrapper(context);
+            SuggestionsBuilderWrapper wrapper = new SuggestionsBuilderWrapper(builder);
+            return handler.complete(wrapped, wrapper);
+        });
         argumentStack.add(arg);
         return this;
     }
 
     /**
      * Adds an argument to the argument.
-     * This method allows for specifying the type of argument and its executor.
      *
      * @param <T>      the type of the argument.
      * @param argument the {@link Argument}
@@ -551,7 +579,7 @@ public final class CommandArgument {
     }
 
     /**
-     * Adds an argument to the argument with a completion handler.
+     * Adds an argument to the argument.
      *
      * @param <T>      the type of the argument.
      * @param argument the {@link Argument}
@@ -582,6 +610,155 @@ public final class CommandArgument {
     }
 
     /**
+     * Adds an argument to the argument.
+     *
+     * @param type the type of the argument.
+     * @param name the name of the argument.
+     * @return this {@link CommandArgument} instance for chaining.
+     */
+    @NotNull
+    @CanIgnoreReturnValue
+    public CommandArgument argument(@NotNull ArgumentType<?> type, @NotNull String name) {
+        RequiredArgumentBuilder<CommandSourceStack, ?> arg = RequiredArgumentBuilder.argument(name, type);
+        argumentStack.add(arg);
+        return this;
+    }
+
+    /**
+     * Adds an argument to the argument.
+     *
+     * @param type    the type of the argument.
+     * @param name    the name of the argument.
+     * @param handler the {@link CompletionHandler} for the argument.
+     * @return this {@link CommandArgument} instance for chaining.
+     */
+    @NotNull
+    @CanIgnoreReturnValue
+    public CommandArgument argument(@NotNull ArgumentType<?> type, @NotNull String name, @NotNull CompletionHandler handler) {
+        RequiredArgumentBuilder<CommandSourceStack, ?> arg = RequiredArgumentBuilder.argument(name, type);
+        arg.suggests((context, builder) -> {
+            CommandWrapper wrapped = new CommandWrapper(context);
+            SuggestionsBuilderWrapper wrapper = new SuggestionsBuilderWrapper(builder);
+            return handler.complete(wrapped, wrapper);
+        });
+        argumentStack.add(arg);
+        return this;
+    }
+
+    /**
+     * Adds an argument to the argument.
+     *
+     * @param type     the type of the argument.
+     * @param name     the name of the argument.
+     * @param executor the {@link CommandExecutor} to be executed when the argument is provided.
+     * @return this {@link CommandArgument} instance for chaining.
+     */
+    @NotNull
+    @CanIgnoreReturnValue
+    public CommandArgument argument(@NotNull ArgumentType<?> type, @NotNull String name, @NotNull CommandExecutor executor) {
+        RequiredArgumentBuilder<CommandSourceStack, ?> arg = RequiredArgumentBuilder.argument(name, type);
+        arg.executes(context -> {
+            CommandWrapper wrapped = new CommandWrapper(context);
+            try {
+                executor.execute(wrapped);
+                return 1;
+            } catch (CmdException e) {
+                e.send();
+                return 0;
+            }
+        });
+        argumentStack.add(arg);
+        return this;
+    }
+
+    /**
+     * Adds an argument to the argument.
+     *
+     * @param type     the type of the argument.
+     * @param name     the name of the argument.
+     * @param executor the {@link CommandExecutor} to be executed when the argument is provided.
+     * @param handler  the {@link CompletionHandler} for the argument.
+     * @return this {@link CommandArgument} instance for chaining.
+     */
+    @NotNull
+    @CanIgnoreReturnValue
+    public CommandArgument argument(@NotNull ArgumentType<?> type, @NotNull String name, @NotNull CommandExecutor executor, CompletionHandler handler) {
+        RequiredArgumentBuilder<CommandSourceStack, ?> arg = RequiredArgumentBuilder.argument(name, type);
+        arg.executes(context -> {
+            CommandWrapper wrapped = new CommandWrapper(context);
+            try {
+                executor.execute(wrapped);
+                return 1;
+            } catch (CmdException e) {
+                e.send();
+                return 0;
+            }
+        }).suggests((context, builder) -> {
+            CommandWrapper wrapped = new CommandWrapper(context);
+            SuggestionsBuilderWrapper wrapper = new SuggestionsBuilderWrapper(builder);
+            return handler.complete(wrapped, wrapper);
+        });
+        argumentStack.add(arg);
+        return this;
+    }
+
+    /**
+     * Adds an argument to the argument.
+     *
+     * @param type the type of the argument.
+     * @param name the name of the argument.
+     * @return this {@link CommandArgument} instance for chaining.
+     */
+    @NotNull
+    @CanIgnoreReturnValue
+    public CommandArgument argument(@NotNull String name, @NotNull ArgumentType<?> type) {
+        return argument(type, name);
+    }
+
+    /**
+     * Adds an argument to the argument.
+     *
+     * @param type    the type of the argument.
+     * @param name    the name of the argument.
+     * @param handler the {@link CompletionHandler} for the argument.
+     * @return this {@link CommandArgument} instance for chaining.
+     */
+    @NotNull
+    @CanIgnoreReturnValue
+    public CommandArgument argument(@NotNull String name, @NotNull ArgumentType<?> type, CompletionHandler handler) {
+        return argument(type, name, handler);
+    }
+
+    /**
+     * Adds an argument to the argument.
+     *
+     * @param type     the type of the argument.
+     * @param name     the name of the argument.
+     * @param executor the {@link CommandExecutor} to be executed when the argument is provided.
+     * @return this {@link CommandArgument} instance for chaining.
+     */
+    @NotNull
+    @CanIgnoreReturnValue
+    public CommandArgument argument(@NotNull String name, @NotNull ArgumentType<?> type, @NotNull CommandExecutor executor) {
+        return argument(type, name, executor);
+    }
+
+    /**
+     * Adds an argument to the argument.
+     *
+     * @param type     the type of the argument.
+     * @param name     the name of the argument.
+     * @param executor the {@link CommandExecutor} to be executed when the argument is provided.
+     * @param handler  the {@link CompletionHandler} for the argument.
+     * @return this {@link CommandArgument} instance for chaining.
+     */
+    @NotNull
+    @CanIgnoreReturnValue
+    public CommandArgument argument(@NotNull String name, @NotNull ArgumentType<?> type, @NotNull CommandExecutor executor, CompletionHandler handler) {
+        return argument(type, name, executor, handler);
+    }
+
+    /**
      * Adds a completion handler to the main argument.
      *
      * @param handler the {@link CompletionHandler} completion handler for the argument.
@@ -601,7 +778,8 @@ public final class CommandArgument {
     /**
      * Adds a completion handler to the first or last argument added to the argument.
      *
-     * @param handler the {@link CompletionHandler} completion handler for the argument.
+     * @param position the position of the argument to add the completion handler to.
+     * @param handler  the {@link CompletionHandler} completion handler for the argument.
      * @return this {@link CommandArgument} instance for chaining.
      */
     @NotNull

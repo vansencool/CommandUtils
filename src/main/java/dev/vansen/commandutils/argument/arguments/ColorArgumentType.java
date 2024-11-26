@@ -6,6 +6,7 @@ import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
+import com.mojang.brigadier.suggestion.Suggestion;
 import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import dev.vansen.commandutils.argument.arguments.color.ArgumentColors;
@@ -16,6 +17,8 @@ import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.jetbrains.annotations.NotNull;
 
+import java.lang.reflect.Field;
+import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 
@@ -39,7 +42,7 @@ public final class ColorArgumentType implements CustomArgumentType.Converted<Tex
     }
 
     /**
-     * Creates a new ColorArgumentType with a custom tooltip and a default color.
+     * Creates a new ColorArgumentType with a custom tooltip and a default color (166, 233, 255).
      *
      * @param tooltip The tooltip to display when providing suggestions.
      */
@@ -104,6 +107,7 @@ public final class ColorArgumentType implements CustomArgumentType.Converted<Tex
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public <S> @NotNull CompletableFuture<Suggestions> listSuggestions(@NotNull CommandContext<S> context, @NotNull SuggestionsBuilder builder) {
         try {
             ArgumentColors.colorNames.parallelStream()
@@ -112,7 +116,18 @@ public final class ColorArgumentType implements CustomArgumentType.Converted<Tex
                             .serializeOrNull(MiniMessage.miniMessage().deserializeOrNull("<color:" + color.asHexString() + ">" + tooltip.replaceAll("<color>", name)))));
             return builder.buildFuture();
         } catch (@NotNull Exception e) {
-            return Suggestions.empty();
+            try {
+                Field resultField = SuggestionsBuilder.class.getDeclaredField("result");
+                resultField.setAccessible(true);
+                List<Suggestion> result = (List<Suggestion>) resultField.get(builder);
+                result.clear();
+            } catch (Exception ex) {
+                return Suggestions.empty();
+            }
+            ArgumentColors.colorNames.parallelStream()
+                    .forEach(name -> builder.suggest(name, MessageComponentSerializer.message()
+                            .serializeOrNull(MiniMessage.miniMessage().deserializeOrNull("<color:" + color.asHexString() + ">" + tooltip.replaceAll("<color>", name)))));
+            return builder.buildFuture();
         }
     }
 }

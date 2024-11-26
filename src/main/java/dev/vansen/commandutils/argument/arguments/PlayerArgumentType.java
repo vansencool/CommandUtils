@@ -6,6 +6,7 @@ import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
+import com.mojang.brigadier.suggestion.Suggestion;
 import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import io.papermc.paper.command.brigadier.MessageComponentSerializer;
@@ -16,6 +17,8 @@ import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 
+import java.lang.reflect.Field;
+import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 
@@ -115,6 +118,7 @@ public final class PlayerArgumentType implements CustomArgumentType.Converted<Pl
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public <S> @NotNull CompletableFuture<Suggestions> listSuggestions(@NotNull CommandContext<S> context, @NotNull SuggestionsBuilder builder) {
         try {
             Bukkit.getOnlinePlayers()
@@ -125,7 +129,20 @@ public final class PlayerArgumentType implements CustomArgumentType.Converted<Pl
                                     .color(color))));
             return builder.buildFuture();
         } catch (@NotNull Exception e) {
-            return Suggestions.empty();
+            try {
+                Field resultField = SuggestionsBuilder.class.getDeclaredField("result");
+                resultField.setAccessible(true);
+                List<Suggestion> result = (List<Suggestion>) resultField.get(builder);
+                result.clear();
+            } catch (Exception ex) {
+                return Suggestions.empty();
+            }
+            Bukkit.getOnlinePlayers()
+                    .parallelStream()
+                    .forEach(player -> builder.suggest(player.getName(), MessageComponentSerializer.message()
+                            .serialize(Component.text(tooltip.replaceAll("<player>", player.getName()))
+                                    .color(color))));
+            return builder.buildFuture();
         }
     }
 }

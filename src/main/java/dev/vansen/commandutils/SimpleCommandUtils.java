@@ -343,8 +343,9 @@ public class SimpleCommandUtils {
     }
 
     /**
-     * Registers the built command with the system.
+     * Registers the built command with the server.
      */
+    @ApiStatus.NonExtendable
     public void register() {
         build().register();
     }
