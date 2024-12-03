@@ -38,6 +38,7 @@ public final class SubCommand {
 
     private final LiteralArgumentBuilder<CommandSourceStack> builder;
     private final List<RequiredArgumentBuilder<CommandSourceStack, ?>> argumentStack = new ArrayList<>();
+    private boolean nest = true;
     private CommandExecutor defaultExecutor;
     private CommandExecutor playerExecutor;
     private CommandExecutor consoleExecutor;
@@ -271,13 +272,12 @@ public final class SubCommand {
     /**
      * Adds an argument to the subcommand.
      *
-     * @param <T>      the type of the argument.
      * @param argument the {@link CommandArgument}
      * @return this {@link SubCommand} instance for chaining.
      */
     @NotNull
     @CanIgnoreReturnValue
-    public <T> SubCommand argument(@NotNull CommandArgument argument) {
+    public SubCommand argument(@NotNull CommandArgument argument) {
         argumentStack.add(argument.get());
         return this;
     }
@@ -298,15 +298,14 @@ public final class SubCommand {
     /**
      * Adds an argument to the subcommand.
      *
-     * @param <T>      the type of the argument.
      * @param argument the {@link Argument}
      * @param handler  the {@link CompletionHandler} for the argument.
      * @return this {@link SubCommand} instance for chaining.
      */
     @NotNull
     @CanIgnoreReturnValue
-    public <T> SubCommand argument(@NotNull Argument<T> argument, @NotNull CompletionHandler handler) {
-        RequiredArgumentBuilder<CommandSourceStack, T> arg = RequiredArgumentBuilder.argument(argument.name(), argument.type());
+    public SubCommand argument(@NotNull Argument argument, @NotNull CompletionHandler handler) {
+        RequiredArgumentBuilder<CommandSourceStack, ?> arg = RequiredArgumentBuilder.argument(argument.name(), argument.type());
         arg.suggests((context, builder) -> {
             CommandWrapper wrapped = new CommandWrapper(context);
             SuggestionsBuilderWrapper wrapper = new SuggestionsBuilderWrapper(builder);
@@ -319,15 +318,14 @@ public final class SubCommand {
     /**
      * Adds an argument to the subcommand.
      *
-     * @param <T>      the type of the argument.
      * @param argument the {@link Argument}
      * @param executor the {@link CommandExecutor} to be executed when the argument is provided.
      * @return this {@link SubCommand} instance for chaining.
      */
     @NotNull
     @CanIgnoreReturnValue
-    public <T> SubCommand argument(@NotNull Argument<T> argument, @NotNull CommandExecutor executor) {
-        RequiredArgumentBuilder<CommandSourceStack, T> arg = RequiredArgumentBuilder.argument(argument.name(), argument.type());
+    public SubCommand argument(@NotNull Argument argument, @NotNull CommandExecutor executor) {
+        RequiredArgumentBuilder<CommandSourceStack, ?> arg = RequiredArgumentBuilder.argument(argument.name(), argument.type());
         arg.executes(context -> {
             CommandWrapper wrapped = new CommandWrapper(context);
             try {
@@ -345,7 +343,6 @@ public final class SubCommand {
     /**
      * Adds an argument to the subcommand.
      *
-     * @param <T>      the type of the argument.
      * @param argument the {@link Argument}
      * @param executor the {@link CommandExecutor} to be executed when the argument is provided.
      * @param handler  the {@link CompletionHandler} for the argument.
@@ -353,8 +350,8 @@ public final class SubCommand {
      */
     @NotNull
     @CanIgnoreReturnValue
-    public <T> SubCommand argument(@NotNull Argument<T> argument, @NotNull CommandExecutor executor, CompletionHandler handler) {
-        RequiredArgumentBuilder<CommandSourceStack, T> arg = RequiredArgumentBuilder.argument(argument.name(), argument.type());
+    public SubCommand argument(@NotNull Argument argument, @NotNull CommandExecutor executor, CompletionHandler handler) {
+        RequiredArgumentBuilder<CommandSourceStack, ?> arg = RequiredArgumentBuilder.argument(argument.name(), argument.type());
         arg.executes(context -> {
             CommandWrapper wrapped = new CommandWrapper(context);
             try {
@@ -551,6 +548,23 @@ public final class SubCommand {
     }
 
     /**
+     * Disables argument nesting for the subcommand.
+     * <p>
+     * Note, disabling this (may) have 2 or even more arguments in a single argument, which is not recommended.
+     * So it would be "/command [arg1 | arg2 | arg3]" instead of "/command arg1 arg2 arg3", there are other unexpected results as well, for example arguments not working.
+     * <p>
+     * Some cases where this would work would be using {@link CommandArgument} and {@link CommandArgument#argument(CommandArgument)}, but if disabled nesting in command arguments will lead to it not working.
+     *
+     * @return this {@link SubCommand} instance for chaining.
+     */
+    @NotNull
+    @CanIgnoreReturnValue
+    public SubCommand noNest() {
+        nest = false;
+        return this;
+    }
+
+    /**
      * Adds a completion handler to the last argument added to the subcommand.
      *
      * @param handler the {@link CompletionHandler} completion handler for the argument.
@@ -638,7 +652,7 @@ public final class SubCommand {
     @NotNull
     public LiteralArgumentBuilder<CommandSourceStack> get() {
         executeIf();
-        ArgumentNester.nest(argumentStack, builder);
+        if (nest) ArgumentNester.nest(argumentStack, builder);
         return builder;
     }
 }

@@ -13,7 +13,7 @@ public final class Aliases {
     private final List<String> aliases;
 
     /**
-     * Creates a new Aliases instance from a variable number of string aliases.
+     * Creates a new Aliases instance from an array of strings.
      *
      * @param aliases The aliases for the command.
      */
@@ -22,7 +22,7 @@ public final class Aliases {
     }
 
     /**
-     * Creates a new Aliases instance from a list of string aliases.
+     * Creates a new Aliases instance from a list of strings.
      *
      * @param aliases The aliases for the command.
      */
@@ -31,7 +31,7 @@ public final class Aliases {
     }
 
     /**
-     * Returns a new Aliases instance from a variable number of string aliases.
+     * Returns a new Aliases instance from an array of strings.
      *
      * @param aliases The aliases for the command.
      * @return A new Aliases instance.
@@ -41,7 +41,7 @@ public final class Aliases {
     }
 
     /**
-     * Returns a new Aliases instance from a list of string aliases.
+     * Returns a new Aliases instance from a list of strings.
      *
      * @param aliases The aliases for the command.
      * @return A new Aliases instance.

@@ -14,8 +14,10 @@ import io.papermc.paper.command.brigadier.MessageComponentSerializer;
 import io.papermc.paper.command.brigadier.argument.CustomArgumentType;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextColor;
+import net.kyori.adventure.text.logger.slf4j.ComponentLogger;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.lang.reflect.Field;
 import java.util.List;
@@ -25,10 +27,11 @@ import java.util.concurrent.CompletableFuture;
 /**
  * A custom argument type for parsing color values.
  */
-@SuppressWarnings({"UnstableApiUsage", "unused"})
+@SuppressWarnings({"UnstableApiUsage", "unused", "unchecked", "ConstantConditions"})
 public final class ColorArgumentType implements CustomArgumentType.Converted<TextColor, String> {
     private final @NotNull String tooltip;
-    private final @NotNull TextColor color;
+    private final @Nullable TextColor color;
+    private boolean haveTooltip = true;
 
     /**
      * Creates a new ColorArgumentType with a custom tooltip and color.
@@ -36,7 +39,7 @@ public final class ColorArgumentType implements CustomArgumentType.Converted<Tex
      * @param tooltip The tooltip to display when providing suggestions.
      * @param color   The color of the tooltip.
      */
-    public ColorArgumentType(@NotNull String tooltip, @NotNull TextColor color) {
+    public ColorArgumentType(@NotNull String tooltip, @Nullable TextColor color) {
         this.tooltip = tooltip;
         this.color = color;
     }
@@ -87,10 +90,39 @@ public final class ColorArgumentType implements CustomArgumentType.Converted<Tex
         return new ColorArgumentType(tooltip, color);
     }
 
+    /**
+     * Returns whether the player argument type has a tooltip.
+     *
+     * @return True if the player argument type has a tooltip, false otherwise.
+     */
+    public boolean hasTooltip() {
+        return haveTooltip;
+    }
+
+    /**
+     * Sets the suggestions to not have a tooltip.
+     *
+     * @return The current ColorArgumentType instance.
+     */
+    public ColorArgumentType withoutTooltip() {
+        haveTooltip = false;
+        return this;
+    }
+
+    /**
+     * Sets the suggestions to have a tooltip.
+     *
+     * @return The current ColorArgumentType instance.
+     */
+    public ColorArgumentType withTooltip() {
+        haveTooltip = true;
+        return this;
+    }
+
     @Override
     public @NotNull TextColor convert(@NotNull String nativeType) throws CommandSyntaxException {
         try {
-            if (ArgumentColors.colorNames.contains(nativeType.toLowerCase())) {
+            if (ArgumentColors.COLOR_MAP.containsKey(nativeType.toLowerCase())) {
                 return Objects.requireNonNull(TextColor.fromHexString(ArgumentColors.COLOR_MAP.get(nativeType)));
             } else {
                 return Objects.requireNonNull(TextColor.fromHexString(nativeType));
@@ -107,24 +139,34 @@ public final class ColorArgumentType implements CustomArgumentType.Converted<Tex
     }
 
     @Override
-    @SuppressWarnings("unchecked")
     public <S> @NotNull CompletableFuture<Suggestions> listSuggestions(@NotNull CommandContext<S> context, @NotNull SuggestionsBuilder builder) {
         try {
-            ArgumentColors.colorNames.parallelStream()
+            if (!haveTooltip) {
+                ArgumentColors.COLOR_MAP.keySet()
+                        .parallelStream()
+                        .filter(name -> name.startsWith(builder.getInput().substring(builder.getInput().lastIndexOf(" ") + 1)))
+                        .forEach(builder::suggest);
+                return builder.buildFuture();
+            }
+            ArgumentColors.COLOR_MAP.keySet()
+                    .parallelStream()
                     .filter(name -> name.startsWith(builder.getInput().substring(builder.getInput().lastIndexOf(" ") + 1)))
                     .forEach(name -> builder.suggest(name, MessageComponentSerializer.message()
                             .serializeOrNull(MiniMessage.miniMessage().deserializeOrNull("<color:" + color.asHexString() + ">" + tooltip.replaceAll("<color>", name)))));
             return builder.buildFuture();
         } catch (@NotNull Exception e) {
             try {
-                Field resultField = SuggestionsBuilder.class.getDeclaredField("result");
+                Field resultField = builder.getClass().getDeclaredField("result");
                 resultField.setAccessible(true);
                 List<Suggestion> result = (List<Suggestion>) resultField.get(builder);
                 result.clear();
             } catch (Exception ex) {
+                ComponentLogger.logger("CommandUtils")
+                        .error("Failed to clear suggestions", e);
                 return Suggestions.empty();
             }
-            ArgumentColors.colorNames.parallelStream()
+            ArgumentColors.COLOR_MAP.keySet()
+                    .parallelStream()
                     .forEach(name -> builder.suggest(name, MessageComponentSerializer.message()
                             .serializeOrNull(MiniMessage.miniMessage().deserializeOrNull("<color:" + color.asHexString() + ">" + tooltip.replaceAll("<color>", name)))));
             return builder.buildFuture();

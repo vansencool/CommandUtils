@@ -30,7 +30,7 @@ public class SimpleCommandArgument {
     private CommandExecutor entityExecutor;
     private CommandExecutor blockExecutor;
     private CommandExecutor proxiedExecutor;
-    private final Argument<?> argument;
+    private final Argument argument;
     private CompletionHandler handler;
     private SenderTypes[] senderTypes;
     private CommandPermission permission;
@@ -47,7 +47,7 @@ public class SimpleCommandArgument {
      *
      * @param argument the argument to be associated with this SimpleCommandArgument.
      */
-    public <T> SimpleCommandArgument(@NotNull Argument<T> argument) {
+    public SimpleCommandArgument(@NotNull Argument argument) {
         this.argument = argument;
     }
 
@@ -57,8 +57,8 @@ public class SimpleCommandArgument {
      * @param name the name of the argument.
      * @param type the type of the argument.
      */
-    public <T> SimpleCommandArgument(@NotNull String name, @NotNull ArgumentType<T> type) {
-        this(new Argument<>(name, type));
+    public SimpleCommandArgument(@NotNull String name, @NotNull ArgumentType<?> type) {
+        this(new Argument(name, type));
     }
 
     /**
@@ -67,7 +67,7 @@ public class SimpleCommandArgument {
      * @param argument the argument to be associated with this SimpleCommandArgument.
      * @param handler  the completion handler to be associated with this SimpleCommandArgument.
      */
-    public <T> SimpleCommandArgument(@NotNull Argument<T> argument, @NotNull CompletionHandler handler) {
+    public SimpleCommandArgument(@NotNull Argument argument, @NotNull CompletionHandler handler) {
         this.argument = argument;
         this.handler = handler;
     }
@@ -79,8 +79,8 @@ public class SimpleCommandArgument {
      * @param type    the type of the argument.
      * @param handler the completion handler to be associated with this SimpleCommandArgument.
      */
-    public <T> SimpleCommandArgument(@NotNull String name, @NotNull ArgumentType<T> type, CompletionHandler handler) {
-        this(new Argument<>(name, type), handler);
+    public SimpleCommandArgument(@NotNull String name, @NotNull ArgumentType<?> type, CompletionHandler handler) {
+        this(new Argument(name, type), handler);
     }
 
     /**
@@ -353,7 +353,7 @@ public class SimpleCommandArgument {
      */
     @NotNull
     @ApiStatus.NonExtendable
-    public Argument<?> argument() {
+    public Argument argument() {
         return argument;
     }
 }

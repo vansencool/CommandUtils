@@ -17,24 +17,24 @@ import java.util.List;
 @SuppressWarnings("unused")
 public abstract class AbstractCommandArgument {
 
-    private final Argument<?> argument;
+    private final Argument argument;
     private CompletionHandler handler;
 
-    public <T> AbstractCommandArgument(@NotNull Argument<T> argument) {
+    public AbstractCommandArgument(@NotNull Argument argument) {
         this.argument = argument;
     }
 
-    public <T> AbstractCommandArgument(@NotNull String name, @NotNull ArgumentType<T> type) {
-        this(new Argument<>(name, type));
+    public AbstractCommandArgument(@NotNull String name, @NotNull ArgumentType<?> type) {
+        this(new Argument(name, type));
     }
 
-    public <T> AbstractCommandArgument(@NotNull Argument<T> argument, @NotNull CompletionHandler handler) {
+    public AbstractCommandArgument(@NotNull Argument argument, @NotNull CompletionHandler handler) {
         this.argument = argument;
         this.handler = handler;
     }
 
-    public <T> AbstractCommandArgument(@NotNull String name, @NotNull ArgumentType<T> type, CompletionHandler handler) {
-        this(new Argument<>(name, type), handler);
+    public AbstractCommandArgument(@NotNull String name, @NotNull ArgumentType<?> type, CompletionHandler handler) {
+        this(new Argument(name, type), handler);
     }
 
     public SenderTypes[] senderTypes() {

@@ -51,6 +51,7 @@ public final class CommandUtils {
 
     private final LiteralArgumentBuilder<CommandSourceStack> builder;
     private final List<RequiredArgumentBuilder<CommandSourceStack, ?>> argumentStack = new ArrayList<>();
+    private boolean nest = true;
     private CommandExecutor defaultExecutor;
     private CommandExecutor playerExecutor;
     private CommandExecutor consoleExecutor;
@@ -166,6 +167,10 @@ public final class CommandUtils {
         if (defaultExecutor != null || playerExecutor != null || consoleExecutor != null || remoteConsoleExecutor != null || entityExecutor != null || blockExecutor != null || proxiedExecutor != null) {
             execute();
         }
+    }
+
+    private void nest() {
+        if (nest) ArgumentNester.nest(argumentStack, builder);
     }
 
     /**
@@ -299,13 +304,12 @@ public final class CommandUtils {
     /**
      * Adds an argument to the command.
      *
-     * @param <T>      the type of the argument.
      * @param argument the {@link CommandArgument}
      * @return this {@link CommandUtils} instance for chaining.
      */
     @NotNull
     @CanIgnoreReturnValue
-    public <T> CommandUtils argument(@NotNull CommandArgument argument) {
+    public CommandUtils argument(@NotNull CommandArgument argument) {
         argumentStack.add(argument.get());
         return this;
     }
@@ -326,14 +330,13 @@ public final class CommandUtils {
     /**
      * Adds an argument to the command.
      *
-     * @param <T>      the type of the argument.
      * @param argument the {@link Argument}
      * @return this {@link CommandUtils} instance for chaining.
      */
     @NotNull
     @CanIgnoreReturnValue
-    public <T> CommandUtils argument(@NotNull Argument<T> argument) {
-        RequiredArgumentBuilder<CommandSourceStack, T> arg = RequiredArgumentBuilder.argument(argument.name(), argument.type());
+    public CommandUtils argument(@NotNull Argument argument) {
+        RequiredArgumentBuilder<CommandSourceStack, ?> arg = RequiredArgumentBuilder.argument(argument.name(), argument.type());
         argumentStack.add(arg);
         return this;
     }
@@ -341,15 +344,14 @@ public final class CommandUtils {
     /**
      * Adds an argument to the command.
      *
-     * @param <T>      the type of the argument.
      * @param argument the {@link Argument}
      * @param handler  the {@link CompletionHandler} for the argument.
      * @return this {@link CommandUtils} instance for chaining.
      */
     @NotNull
     @CanIgnoreReturnValue
-    public <T> CommandUtils argument(@NotNull Argument<T> argument, @NotNull CompletionHandler handler) {
-        RequiredArgumentBuilder<CommandSourceStack, T> arg = RequiredArgumentBuilder.argument(argument.name(), argument.type());
+    public CommandUtils argument(@NotNull Argument argument, @NotNull CompletionHandler handler) {
+        RequiredArgumentBuilder<CommandSourceStack, ?> arg = RequiredArgumentBuilder.argument(argument.name(), argument.type());
         arg.suggests((context, builder) -> {
             CommandWrapper wrapped = new CommandWrapper(context);
             SuggestionsBuilderWrapper wrapper = new SuggestionsBuilderWrapper(builder);
@@ -362,15 +364,14 @@ public final class CommandUtils {
     /**
      * Adds an argument to the command.
      *
-     * @param <T>      the type of the argument.
      * @param argument the {@link Argument}
      * @param executor the {@link CommandExecutor} to be executed when the argument is provided.
      * @return this {@link CommandUtils} instance for chaining.
      */
     @NotNull
     @CanIgnoreReturnValue
-    public <T> CommandUtils argument(@NotNull Argument<T> argument, @NotNull CommandExecutor executor) {
-        RequiredArgumentBuilder<CommandSourceStack, T> arg = RequiredArgumentBuilder.argument(argument.name(), argument.type());
+    public CommandUtils argument(@NotNull Argument argument, @NotNull CommandExecutor executor) {
+        RequiredArgumentBuilder<CommandSourceStack, ?> arg = RequiredArgumentBuilder.argument(argument.name(), argument.type());
         arg.executes(context -> {
             CommandWrapper wrapped = new CommandWrapper(context);
             try {
@@ -388,7 +389,6 @@ public final class CommandUtils {
     /**
      * Adds an argument to the command.
      *
-     * @param <T>      the type of the argument.
      * @param argument the {@link Argument}
      * @param executor the {@link CommandExecutor} to be executed when the argument is provided.
      * @param handler  the {@link CompletionHandler} for the argument.
@@ -396,8 +396,8 @@ public final class CommandUtils {
      */
     @NotNull
     @CanIgnoreReturnValue
-    public <T> CommandUtils argument(@NotNull Argument<T> argument, @NotNull CommandExecutor executor, CompletionHandler handler) {
-        RequiredArgumentBuilder<CommandSourceStack, T> arg = RequiredArgumentBuilder.argument(argument.name(), argument.type());
+    public CommandUtils argument(@NotNull Argument argument, @NotNull CommandExecutor executor, CompletionHandler handler) {
+        RequiredArgumentBuilder<CommandSourceStack, ?> arg = RequiredArgumentBuilder.argument(argument.name(), argument.type());
         arg.executes(context -> {
             CommandWrapper wrapped = new CommandWrapper(context);
             try {
@@ -678,6 +678,23 @@ public final class CommandUtils {
     }
 
     /**
+     * Disables argument nesting for the command.
+     * <p>
+     * Note, disabling this (may) have 2 or even more arguments in a single argument, which is not recommended.
+     * So it would be "/command [arg1 | arg2 | arg3]" instead of "/command arg1 arg2 arg3", there are other unexpected results as well, for example arguments not working.
+     * <p>
+     * Some cases where this would work would be using {@link CommandArgument} and {@link CommandArgument#argument(CommandArgument)}, but if disabled nesting in command arguments will lead to it not working.
+     *
+     * @return this {@link CommandUtils} instance for chaining.
+     */
+    @NotNull
+    @CanIgnoreReturnValue
+    public CommandUtils noNest() {
+        nest = false;
+        return this;
+    }
+
+    /**
      * Sets the aliases of the command using an {@link Aliases} instance.
      *
      * @param aliases a {@link Aliases} for setting metadata.
@@ -754,7 +771,7 @@ public final class CommandUtils {
         CommandAPI.get().registerEventHandler(LifecycleEvents.COMMANDS, event -> {
             final Commands commands = event.registrar();
             executeIf();
-            ArgumentNester.nest(argumentStack, builder);
+            nest();
             commands.register(builder.build(), description, aliases == null ? List.of() : aliases);
         });
     }
@@ -767,7 +784,7 @@ public final class CommandUtils {
         plugin.registerEventHandler(LifecycleEvents.COMMANDS, event -> {
             final Commands commands = event.registrar();
             executeIf();
-            ArgumentNester.nest(argumentStack, builder);
+            nest();
             commands.register(builder.build(), description, aliases == null ? List.of() : aliases);
         });
     }
@@ -780,7 +797,7 @@ public final class CommandUtils {
         plugin.getLifecycleManager().registerEventHandler(LifecycleEvents.COMMANDS, event -> {
             final Commands commands = event.registrar();
             executeIf();
-            ArgumentNester.nest(argumentStack, builder);
+            nest();
             commands.register(builder.build(), description, aliases == null ? List.of() : aliases);
         });
     }
@@ -793,7 +810,7 @@ public final class CommandUtils {
         CommandAPI.get().registerEventHandler(LifecycleEvents.COMMANDS, event -> {
             final Commands commands = event.registrar();
             executeIf();
-            ArgumentNester.nest(argumentStack, builder);
+            nest();
             commands.register(meta, builder.build(), description, aliases == null ? List.of() : aliases);
         });
     }
@@ -812,20 +829,20 @@ public final class CommandUtils {
         CommandAPI.get().registerEventHandler(LifecycleEvents.COMMANDS, event -> {
             final Commands commands = event.registrar();
             executeIf();
-            ArgumentNester.nest(argumentStack, builder);
+            nest();
             commands.getDispatcher().register(builder);
             commands.getDispatcher().register(LiteralArgumentBuilder
                     .<CommandSourceStack>literal(namespace + ":" + builder.getLiteral())
                     .redirect(builder.build()));
             if (aliases != null && !aliases.isEmpty()) {
-                for (String alias : aliases) {
+                aliases.forEach(alias -> {
                     commands.getDispatcher().register(LiteralArgumentBuilder
                             .<CommandSourceStack>literal(alias)
                             .redirect(builder.build()));
                     commands.getDispatcher().register(LiteralArgumentBuilder
                             .<CommandSourceStack>literal(namespace + ":" + alias)
                             .redirect(builder.build()));
-                }
+                });
             }
         });
     }

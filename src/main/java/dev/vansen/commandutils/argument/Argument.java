@@ -6,7 +6,8 @@ import org.jetbrains.annotations.NotNull;
 /**
  * Represents an argument in a command.
  *
- * @param <T> the type of the argument
+ * @param name The name of the argument.
+ * @param type The type of the argument.
  */
-public record Argument<T>(@NotNull String name, @NotNull ArgumentType<T> type) {
+public record Argument(@NotNull String name, @NotNull ArgumentType<?> type) {
 }

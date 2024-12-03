@@ -14,16 +14,15 @@ import java.util.List;
 public final class ArgumentNester {
 
     /**
-     * Recursively nest arguments into the command.
+     * Backend method for nesting arguments into a command, you generally don't need to use this.
      */
     public static void nest(@NotNull List<RequiredArgumentBuilder<CommandSourceStack, ?>> argumentStack, @NotNull LiteralArgumentBuilder<CommandSourceStack> builder) {
         if (argumentStack.isEmpty()) return;
 
-        // start from the last argument and work backwards
         RequiredArgumentBuilder<CommandSourceStack, ?> lastArg = argumentStack.getLast();
         for (int i = argumentStack.size() - 2; i >= 0; i--) {
             RequiredArgumentBuilder<CommandSourceStack, ?> previousArg = argumentStack.get(i);
-            previousArg.then(lastArg);  // nest the last argument into the previous one
+            previousArg.then(lastArg);
             lastArg = previousArg;
         }
 
@@ -31,16 +30,15 @@ public final class ArgumentNester {
     }
 
     /**
-     * Recursively nest arguments into the argument.
+     * Backend method for nesting arguments into a command, you generally don't need to use this.
      */
     public static void nest(@NotNull RequiredArgumentBuilder<CommandSourceStack, ?> argument, @NotNull List<RequiredArgumentBuilder<CommandSourceStack, ?>> argumentStack) {
         if (argumentStack.isEmpty()) return;
 
-        // start from the last argument and work backwards
         RequiredArgumentBuilder<CommandSourceStack, ?> lastArg = argumentStack.getLast();
         for (int i = argumentStack.size() - 2; i >= 0; i--) {
             RequiredArgumentBuilder<CommandSourceStack, ?> previousArg = argumentStack.get(i);
-            previousArg.then(lastArg);  // nest the last argument into the previous one
+            previousArg.then(lastArg);
             lastArg = previousArg;
         }
 

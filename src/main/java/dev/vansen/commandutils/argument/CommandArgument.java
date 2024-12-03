@@ -4,6 +4,7 @@ import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.mojang.brigadier.arguments.*;
 import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import dev.vansen.commandutils.argument.arguments.ColorArgumentType;
+import dev.vansen.commandutils.argument.arguments.CommandBlockModeArgumentType;
 import dev.vansen.commandutils.argument.arguments.PlayerArgumentType;
 import dev.vansen.commandutils.command.CommandExecutor;
 import dev.vansen.commandutils.command.CommandWrapper;
@@ -37,6 +38,7 @@ import java.util.Optional;
 public final class CommandArgument {
     private final RequiredArgumentBuilder<CommandSourceStack, ?> argument;
     private final List<RequiredArgumentBuilder<CommandSourceStack, ?>> argumentStack = new ArrayList<>();
+    private boolean nest = true;
     private CommandExecutor defaultExecutor;
     private CommandExecutor playerExecutor;
     private CommandExecutor consoleExecutor;
@@ -51,7 +53,7 @@ public final class CommandArgument {
      *
      * @param argument the argument.
      */
-    public <T> CommandArgument(@NotNull Argument<T> argument) {
+    public CommandArgument(@NotNull Argument argument) {
         this.argument = RequiredArgumentBuilder.argument(argument.name(), argument.type());
     }
 
@@ -61,7 +63,7 @@ public final class CommandArgument {
      * @param argument the argument.
      * @param handler  the completion handler.
      */
-    public <T> CommandArgument(@NotNull Argument<T> argument, @NotNull CompletionHandler handler) {
+    public CommandArgument(@NotNull Argument argument, @NotNull CompletionHandler handler) {
         this.argument = RequiredArgumentBuilder.argument(argument.name(), argument.type());
         completion(handler);
     }
@@ -72,7 +74,7 @@ public final class CommandArgument {
      * @param name the name of the argument.
      * @param type the type of the argument.
      */
-    public <T> CommandArgument(@NotNull String name, @NotNull ArgumentType<T> type) {
+    public CommandArgument(@NotNull String name, @NotNull ArgumentType<?> type) {
         this.argument = RequiredArgumentBuilder.argument(name, type);
     }
 
@@ -83,7 +85,7 @@ public final class CommandArgument {
      * @param type    the type of the argument.
      * @param handler the completion handler.
      */
-    public <T> CommandArgument(@NotNull String name, @NotNull ArgumentType<T> type, @NotNull CompletionHandler handler) {
+    public CommandArgument(@NotNull String name, @NotNull ArgumentType<?> type, @NotNull CompletionHandler handler) {
         this.argument = RequiredArgumentBuilder.argument(name, type);
         completion(handler);
     }
@@ -95,7 +97,7 @@ public final class CommandArgument {
      * @return a new {@link CommandArgument} instance.
      */
     @NotNull
-    public static <T> CommandArgument of(@NotNull Argument<T> argument) {
+    public static CommandArgument of(@NotNull Argument argument) {
         return new CommandArgument(argument);
     }
 
@@ -107,7 +109,7 @@ public final class CommandArgument {
      * @return a new {@link CommandArgument} instance.
      */
     @NotNull
-    public static <T> CommandArgument of(@NotNull Argument<T> argument, @NotNull CompletionHandler handler) {
+    public static CommandArgument of(@NotNull Argument argument, @NotNull CompletionHandler handler) {
         return new CommandArgument(argument, handler);
     }
 
@@ -120,7 +122,7 @@ public final class CommandArgument {
      * @return a new {@link CommandArgument} instance.
      */
     @NotNull
-    public static <T> CommandArgument of(@NotNull String name, @NotNull ArgumentType<T> type, @NotNull CompletionHandler handler) {
+    public static CommandArgument of(@NotNull String name, @NotNull ArgumentType<?> type, @NotNull CompletionHandler handler) {
         return new CommandArgument(name, type, handler);
     }
 
@@ -132,7 +134,7 @@ public final class CommandArgument {
      * @return a new {@link CommandArgument} instance.
      */
     @NotNull
-    public static <T> CommandArgument of(@NotNull String name, @NotNull ArgumentType<T> type) {
+    public static CommandArgument of(@NotNull String name, @NotNull ArgumentType<?> type) {
         return new CommandArgument(name, type);
     }
 
@@ -268,6 +270,17 @@ public final class CommandArgument {
     @NotNull
     public static CommandArgument color(@NotNull String name) {
         return new CommandArgument(name, ColorArgumentType.color());
+    }
+
+    /**
+     * Creates a new block mode argument with the specified name.
+     *
+     * @param name the name of the argument.
+     * @return a new {@link CommandArgument} instance representing a block mode argument.
+     */
+    @NotNull
+    public static CommandArgument blockMode(@NotNull String name) {
+        return new CommandArgument(name, CommandBlockModeArgumentType.mode());
     }
 
     /**
@@ -507,13 +520,12 @@ public final class CommandArgument {
     /**
      * Adds an argument to the argument.
      *
-     * @param <T>      the type of the argument.
      * @param argument the {@link CommandArgument}
      * @return this {@link CommandArgument} instance for chaining.
      */
     @NotNull
     @CanIgnoreReturnValue
-    public <T> CommandArgument argument(@NotNull CommandArgument argument) {
+    public CommandArgument argument(@NotNull CommandArgument argument) {
         argumentStack.add(argument.get());
         return this;
     }
@@ -534,15 +546,14 @@ public final class CommandArgument {
     /**
      * Adds an argument to the argument.
      *
-     * @param <T>      the type of the argument.
      * @param argument the {@link Argument}
      * @param handler  the {@link CompletionHandler} for the argument.
      * @return this {@link CommandArgument} instance for chaining.
      */
     @NotNull
     @CanIgnoreReturnValue
-    public <T> CommandArgument argument(@NotNull Argument<T> argument, @NotNull CompletionHandler handler) {
-        RequiredArgumentBuilder<CommandSourceStack, T> arg = RequiredArgumentBuilder.argument(argument.name(), argument.type());
+    public CommandArgument argument(@NotNull Argument argument, @NotNull CompletionHandler handler) {
+        RequiredArgumentBuilder<CommandSourceStack, ?> arg = RequiredArgumentBuilder.argument(argument.name(), argument.type());
         arg.suggests((context, builder) -> {
             CommandWrapper wrapped = new CommandWrapper(context);
             SuggestionsBuilderWrapper wrapper = new SuggestionsBuilderWrapper(builder);
@@ -555,15 +566,14 @@ public final class CommandArgument {
     /**
      * Adds an argument to the argument.
      *
-     * @param <T>      the type of the argument.
      * @param argument the {@link Argument}
      * @param executor the {@link CommandExecutor} to be executed when the argument is provided.
      * @return this {@link CommandArgument} instance for chaining.
      */
     @NotNull
     @CanIgnoreReturnValue
-    public <T> CommandArgument argument(@NotNull Argument<T> argument, @NotNull CommandExecutor executor) {
-        RequiredArgumentBuilder<CommandSourceStack, T> arg = RequiredArgumentBuilder.argument(argument.name(), argument.type());
+    public CommandArgument argument(@NotNull Argument argument, @NotNull CommandExecutor executor) {
+        RequiredArgumentBuilder<CommandSourceStack, ?> arg = RequiredArgumentBuilder.argument(argument.name(), argument.type());
         arg.executes(context -> {
             CommandWrapper wrapped = new CommandWrapper(context);
             try {
@@ -581,7 +591,6 @@ public final class CommandArgument {
     /**
      * Adds an argument to the argument.
      *
-     * @param <T>      the type of the argument.
      * @param argument the {@link Argument}
      * @param executor the {@link CommandExecutor} to be executed when the argument is provided.
      * @param handler  the {@link CompletionHandler} for the argument.
@@ -589,8 +598,8 @@ public final class CommandArgument {
      */
     @NotNull
     @CanIgnoreReturnValue
-    public <T> CommandArgument argument(@NotNull Argument<T> argument, @NotNull CommandExecutor executor, CompletionHandler handler) {
-        RequiredArgumentBuilder<CommandSourceStack, T> arg = RequiredArgumentBuilder.argument(argument.name(), argument.type());
+    public CommandArgument argument(@NotNull Argument argument, @NotNull CommandExecutor executor, CompletionHandler handler) {
+        RequiredArgumentBuilder<CommandSourceStack, ?> arg = RequiredArgumentBuilder.argument(argument.name(), argument.type());
         arg.executes(context -> {
             CommandWrapper wrapped = new CommandWrapper(context);
             try {
@@ -848,6 +857,21 @@ public final class CommandArgument {
     }
 
     /**
+     * Disables argument nesting for the argument.
+     * <p>
+     * Note, disabling this (may) have 2 or even more arguments in a single argument, which is not recommended.
+     * So it would be "/command [arg1 | arg2 | arg3]" instead of "/command arg1 arg2 arg3", there are other unexpected results as well, for example arguments not working.
+     * <p>
+     * Some cases where this would work would be using {@link CommandArgument} and {@link CommandArgument#argument(CommandArgument)}, but if disabled nesting in command arguments will lead to it not working.
+     *
+     * @return this {@link CommandArgument} instance for chaining.
+     */
+    public CommandArgument noNest() {
+        nest = false;
+        return this;
+    }
+
+    /**
      * Adds a permission to the argument.
      *
      * @param permission the {@link CommandPermission} to be added.
@@ -866,8 +890,8 @@ public final class CommandArgument {
 
     @NotNull
     public RequiredArgumentBuilder<CommandSourceStack, ?> get() {
-        ArgumentNester.nest(argument, argumentStack);
         executeIf();
+        if (nest) ArgumentNester.nest(argument, argumentStack);
         return argument;
     }
 }

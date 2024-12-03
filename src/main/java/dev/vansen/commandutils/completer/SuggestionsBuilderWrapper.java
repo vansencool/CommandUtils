@@ -61,6 +61,47 @@ public final class SuggestionsBuilderWrapper {
     }
 
     /**
+     * Adds multiple suggestions to the list of completions.
+     *
+     * @param suggestions the suggestions to be added. This should not be null.
+     * @return this instance for method chaining.
+     */
+    @NotNull
+    @CanIgnoreReturnValue
+    public SuggestionsBuilderWrapper suggest(@NotNull Iterable<String> suggestions) {
+        suggestions.forEach(builder::suggest);
+        return this;
+    }
+
+    /**
+     * Adds multiple suggestions to the list of completions with an associated tooltip.
+     *
+     * @param suggestions the suggestions to be added. This should not be null.
+     * @param tooltip     the tooltip to be shown with the suggestion. This should not be null.
+     * @return this instance for method chaining.
+     */
+    @NotNull
+    @CanIgnoreReturnValue
+    public SuggestionsBuilderWrapper suggest(@NotNull Iterable<Suggestion> suggestions, @NotNull String tooltip) {
+        suggestions.forEach(suggestion -> builder.suggest(suggestion.text(), MessageComponentSerializer.message().serializeOrNull(MiniMessage.miniMessage().deserializeOrNull(tooltip))));
+        return this;
+    }
+
+    /**
+     * Adds multiple suggestions to the list of completions with an associated tooltip.
+     *
+     * @param suggestions the suggestions to be added. This should not be null.
+     * @param tooltip     the tooltip to be shown with the suggestion. This should not be null.
+     * @return this instance for method chaining.
+     */
+    @NotNull
+    @CanIgnoreReturnValue
+    public SuggestionsBuilderWrapper suggest(@NotNull Iterable<Suggestion> suggestions, @NotNull Component tooltip) {
+        suggestions.forEach(suggestion -> builder.suggest(suggestion.text(), MessageComponentSerializer.message().serializeOrNull(tooltip)));
+        return this;
+    }
+
+    /**
      * Adds a suggestion to the list of completions with an associated tooltip.
      *
      * @param suggestion the text to be suggested. This should not be null.

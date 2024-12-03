@@ -146,27 +146,7 @@ public record CommandWrapper(CommandContext<CommandSourceStack> context) {
     }
 
     /**
-     * Sends a response to the command sender as a rich message.
-     *
-     * @param message the message to send
-     */
-    public void response(@Nullable String message) {
-        if (message == null) return;
-        sender().sendRichMessage(message);
-    }
-
-    /**
-     * Sends a response to the command sender as a component message.
-     *
-     * @param message the message to send
-     */
-    public void response(@Nullable Component message) {
-        if (message == null) return;
-        sender().sendMessage(message);
-    }
-
-    /**
-     * Sends multiple responses to the command sender as rich messages.
+     * Sends responses to the command sender as rich messages.
      *
      * @param messages the messages to send
      */
@@ -177,7 +157,7 @@ public record CommandWrapper(CommandContext<CommandSourceStack> context) {
     }
 
     /**
-     * Sends multiple responses to the command sender as component messages.
+     * Sends responses to the command sender as component messages.
      *
      * @param messages the messages to send
      */
@@ -185,6 +165,68 @@ public record CommandWrapper(CommandContext<CommandSourceStack> context) {
         Arrays.stream(messages)
                 .filter(Objects::nonNull)
                 .forEach(message -> sender().sendMessage(message));
+    }
+
+    /**
+     * Sends responses to the command sender as rich messages.
+     *
+     * @param messages the messages to send
+     */
+    public void response(@NotNull Iterable<String> messages) {
+        messages.forEach(message -> sender().sendRichMessage(message));
+    }
+
+    /**
+     * Sends responses to the command sender as component messages.
+     *
+     * @param messages the messages to send
+     */
+    public void responseComponent(@NotNull Iterable<Component> messages) {
+        messages.forEach(message -> sender().sendMessage(message));
+    }
+
+    /**
+     * Sends responses to the command sender as action bar messages.
+     *
+     * @param messages the messages to send
+     */
+    public void actionBar(@Nullable String... messages) {
+        if (!isPlayer()) return;
+        Arrays.stream(messages)
+                .filter(Objects::nonNull)
+                .forEach(message -> sender().sendActionBar(MiniMessage.miniMessage().deserializeOrNull(message)));
+    }
+
+    /**
+     * Sends responses to the command sender as action bar component messages.
+     *
+     * @param messages the messages to send
+     */
+    public void actionBar(@Nullable Component... messages) {
+        if (!isPlayer()) return;
+        Arrays.stream(messages)
+                .filter(Objects::nonNull)
+                .forEach(message -> sender().sendActionBar(message));
+    }
+
+    /**
+     * Sends responses to the command sender as action bar messages.
+     *
+     * @param messages the messages to send
+     */
+    public void actionBar(@NotNull Iterable<String> messages) {
+        if (!isPlayer()) return;
+        messages.forEach(message -> sender().sendActionBar(MiniMessage.miniMessage().deserializeOrNull(message)));
+    }
+
+    /**
+     * Sends responses to the command sender as action bar component messages.
+     *
+     * @param messages the messages to send
+     */
+    public void actionBarComponent(@NotNull Iterable<Component> messages) {
+        if (!isPlayer()) return;
+        messages.forEach(message -> sender().sendActionBar(message));
     }
 
     /**
@@ -275,6 +317,15 @@ public record CommandWrapper(CommandContext<CommandSourceStack> context) {
     }
 
     /**
+     * Helper method to get input as a set.
+     *
+     * @return A set of strings containing the input in the command, separated by spaces.
+     */
+    public Set<String> inputAsSet() {
+        return new HashSet<>(inputAsList());
+    }
+
+    /**
      * Helper method to get arguments after a given index.
      * Automatically parses the input to get the arguments in the command.
      *
@@ -296,9 +347,8 @@ public record CommandWrapper(CommandContext<CommandSourceStack> context) {
      * @return True if the flag exists, false otherwise.
      */
     public boolean hasFlag(@NotNull String flag) {
-        return Arrays.asList(context.getInput()
-                        .split(" "))
-                .remove(flag);
+        return inputAsList()
+                .contains(flag);
     }
 
     /**
@@ -348,32 +398,21 @@ public record CommandWrapper(CommandContext<CommandSourceStack> context) {
     }
 
     /**
-     * Helper method to check if a flag exists in the input.
-     *
-     * @param flag The flag to check.
-     * @return True if the flag exists, false otherwise.
-     */
-    public boolean hasFlags(@NotNull String flag) {
-        return inputAsStream()
-                .anyMatch(arg -> arg.startsWith(flag));
-    }
-
-    /**
      * Helper method to check if multiple flags exist in the input.
      *
      * @param flags The flags to check.
-     * @return True if all flags exist, false otherwise.
+     * @return True if any of the flags exist, false otherwise.
      */
     public boolean hasFlags(@NotNull String... flags) {
         return Arrays.stream(flags)
-                .anyMatch(this::hasFlags);
+                .anyMatch(this::hasFlag);
     }
 
     /**
      * Helper method to check if multiple flags exist in the input.
      *
      * @param flags The flags to check.
-     * @return True if all flags exist, false otherwise.
+     * @return True if any of the flags exist, false otherwise.
      */
     public boolean hasFlags(@NotNull Collection<String> flags) {
         return flags.stream()
@@ -611,6 +650,14 @@ public record CommandWrapper(CommandContext<CommandSourceStack> context) {
         return 0;
     }
 
+    public String argsBetween(int start, int end) {
+        String[] args = input().split(" ");
+        if (start < args.length && end < args.length) {
+            return String.join(" ", Arrays.copyOfRange(args, start, end));
+        }
+        return "";
+    }
+
     /**
      * Retrieves a command argument by its name and converts it to a boolean.
      *
@@ -629,6 +676,44 @@ public record CommandWrapper(CommandContext<CommandSourceStack> context) {
      */
     public String argString(@NotNull String arg) {
         return context.getArgument(arg, String.class);
+    }
+
+    /**
+     * Retrieves a command argument by its name and converts it to a string, then splits it into an array and returns the first value.
+     * <p>
+     * For example, if there's a greedy string argument, and the user enters "a b c", argStringFirst("arg") will return "a".
+     * <p>
+     * This works for non-greedy string arguments as well.
+     *
+     * @param arg the name of the argument.
+     * @return the argument value converted to a string.
+     */
+    public String argStringFirst(@NotNull String arg) {
+        return argStringAt(arg, 0);
+    }
+
+    /**
+     * Retrieves a command argument by its name and converts it to a string, then splits it into an array and returns the value at the given index.
+     * <p>
+     * For example, if there's a greedy string argument, and the user enters "a b c", argStringAt("arg", 1) will return "b".
+     * <p>
+     * This only works for greedy string arguments, Using it on a non-greedy string argument will result in undefined behavior, and may throw an exception.
+     *
+     * @param arg the name of the argument.
+     * @return the argument value converted to a string.
+     */
+    public String argStringAt(@NotNull String arg, int index) {
+        return context.getArgument(arg, String.class).split(" ")[index];
+    }
+
+    /**
+     * Retrieves a command argument by its name and converts it to a string.
+     *
+     * @param arg the name of the argument.
+     * @return the argument value converted to a string.
+     */
+    public String argBlockMode(@NotNull String arg) {
+        return argString(arg);
     }
 
     /**
@@ -741,8 +826,65 @@ public record CommandWrapper(CommandContext<CommandSourceStack> context) {
      * @param def the default value to return if the argument is not present.
      * @return the argument value converted to a string, or the default value if not present or invalid.
      */
-    public String argString(@NotNull String arg, @NotNull String def) {
-        return arg(arg, String.class, def);
+    public String argString(@NotNull String arg, @Nullable String def) {
+        try {
+            return argString(arg);
+        } catch (Exception e) {
+            return def;
+        }
+    }
+
+    /**
+     * Retrieves a command argument by its name and converts it to a string.
+     * If the argument is not present or invalid, returns the default value.
+     * <p>
+     * View more details at {@link #argStringFirst(String)}
+     *
+     * @param arg the name of the argument.
+     * @param def the default value to return if the argument is not present.
+     * @return the argument value converted to a string, or the default value if not present or invalid.
+     */
+    public String argStringFirst(@NotNull String arg, @Nullable String def) {
+        try {
+            return argStringFirst(arg);
+        } catch (Exception e) {
+            return def;
+        }
+    }
+
+    /**
+     * Retrieves a command argument by its name and converts it to a string.
+     * If the argument is not present or invalid, returns the default value.
+     * <p>
+     * View more details at {@link #argStringAt(String, int)}
+     *
+     * @param arg   the name of the argument.
+     * @param index the index of the argument to retrieve.
+     * @param def   the default value to return if the argument is not present.
+     * @return the argument value converted to a string, or the default value if not present or invalid.
+     */
+    public String argStringAt(@NotNull String arg, int index, @Nullable String def) {
+        try {
+            return argStringAt(arg, index);
+        } catch (Exception e) {
+            return def;
+        }
+    }
+
+    /**
+     * Retrieves a command argument by its name and converts it to a string.
+     * If the argument is not present or invalid, returns the default value.
+     *
+     * @param arg the name of the argument.
+     * @param def the default value to return if the argument is not present.
+     * @return the argument value converted to a string, or the default value if not present or invalid.
+     */
+    public String argBlockMode(@NotNull String arg, @Nullable String def) {
+        try {
+            return argBlockMode(arg);
+        } catch (Exception e) {
+            return def;
+        }
     }
 
     /**
@@ -1137,6 +1279,116 @@ public record CommandWrapper(CommandContext<CommandSourceStack> context) {
     }
 
     /**
+     * Throws a {@link CmdException} with the given message if the given objects are not equal.
+     *
+     * @param obj1    the first object to compare
+     * @param obj2    the second object to compare
+     * @param message the message to include in the exception
+     * @throws CmdException if the objects are not equal
+     */
+    public void throwIfNotEqual(@NotNull Object obj1, @NotNull Object obj2, @NotNull String message) {
+        if (!obj1.equals(obj2)) {
+            throw new CmdException(message, sender());
+        }
+    }
+
+    /**
+     * Throws a {@link CmdException} with the given message if the given objects are not equal.
+     *
+     * @param obj1    the first object to compare
+     * @param obj2    the second object to compare
+     * @param message the message to include in the exception
+     * @throws CmdException if the objects are not equal
+     */
+    public void throwIfNotEqual(@NotNull Object obj1, @NotNull Object obj2, @NotNull Component message) {
+        if (!obj1.equals(obj2)) {
+            throw new CmdException(message, sender());
+        }
+    }
+
+    /**
+     * Throws a {@link CmdException} with the given message if the given runnable throws an exception.
+     *
+     * @param runnable the runnable to run
+     * @param message  the message to include in the exception
+     * @throws CmdException if the runnable throws an exception
+     */
+    public void throwIfThrows(@NotNull Runnable runnable, @NotNull String message) {
+        try {
+            runnable.run();
+        } catch (@NotNull Exception e) {
+            throw new CmdException(message, sender());
+        }
+    }
+
+    /**
+     * Throws a {@link CmdException} with the given message if the given runnable throws an exception.
+     *
+     * @param runnable the runnable to run
+     * @param message  the message to include in the exception
+     * @throws CmdException if the runnable throws an exception
+     */
+    public void throwIfThrows(@NotNull Runnable runnable, @NotNull Component message) {
+        try {
+            runnable.run();
+        } catch (@NotNull Exception e) {
+            throw new CmdException(message, sender());
+        }
+    }
+
+    /**
+     * Throws a {@link CmdException} with the given message if the given collection is empty.
+     *
+     * @param collection the collection to check
+     * @param message    the message to include in the exception
+     * @throws CmdException if the collection is empty
+     */
+    public void throwIfEmpty(@Nullable Collection<?> collection, @NotNull String message) {
+        if (collection == null || collection.isEmpty()) {
+            throw new CmdException(message, sender());
+        }
+    }
+
+    /**
+     * Throws a {@link CmdException} with the given message if the given string is empty.
+     *
+     * @param string  the string to check
+     * @param message the message to include in the exception
+     * @throws CmdException if the string is empty
+     */
+    public void throwIfEmpty(@Nullable String string, @NotNull String message) {
+        if (string == null || string.isEmpty()) {
+            throw new CmdException(message, sender());
+        }
+    }
+
+    /**
+     * Throws a {@link CmdException} with the given message if the given object is null.
+     *
+     * @param obj     the object to check
+     * @param message the message to include in the exception
+     * @throws CmdException if the object is null
+     */
+    public void throwIfNull(@Nullable Object obj, @NotNull String message) {
+        if (obj == null) {
+            throw new CmdException(message, sender());
+        }
+    }
+
+    /**
+     * Throws a {@link CmdException} with the given component message if the given object is null.
+     *
+     * @param obj     the object to check
+     * @param message the component message to include in the exception
+     * @throws CmdException if the object is null
+     */
+    public void throwIfNull(@Nullable Object obj, @NotNull Component message) {
+        if (obj == null) {
+            throw new CmdException(message, sender());
+        }
+    }
+
+    /**
      * Retrieves the entire input string of the command.
      *
      * @return the input string of the command.
@@ -1167,6 +1419,20 @@ public record CommandWrapper(CommandContext<CommandSourceStack> context) {
     public void runIf(@NotNull BooleanChecker predicate, @NotNull Runnable runnable) {
         if (predicate.check()) {
             runnable.run();
+        }
+    }
+
+    /**
+     * Runs the given runnable if the command throws an exception.
+     *
+     * @param runnable the runnable to run (the one that throws the exception)
+     * @param ifError  the runnable to run if the command does not throw an exception
+     */
+    public void ifThrows(@NotNull Runnable runnable, @NotNull Runnable ifError) {
+        try {
+            runnable.run();
+        } catch (Exception e) {
+            ifError.run();
         }
     }
 
@@ -1342,16 +1608,6 @@ public record CommandWrapper(CommandContext<CommandSourceStack> context) {
             task.run();
             check(() -> false);
         }
-    }
-
-    /**
-     * Checks whether the command sender is of the specified type.
-     *
-     * @param type the type of sender to check
-     * @return true if the command sender is of the specified type, false otherwise
-     */
-    public boolean canExecute(@NotNull SenderTypes type) {
-        return senderType() == type;
     }
 
     /**

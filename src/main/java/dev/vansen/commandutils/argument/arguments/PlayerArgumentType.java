@@ -13,9 +13,11 @@ import io.papermc.paper.command.brigadier.MessageComponentSerializer;
 import io.papermc.paper.command.brigadier.argument.CustomArgumentType;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextColor;
+import net.kyori.adventure.text.logger.slf4j.ComponentLogger;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.lang.reflect.Field;
 import java.util.List;
@@ -25,10 +27,11 @@ import java.util.concurrent.CompletableFuture;
 /**
  * A custom argument type for parsing player names.
  */
-@SuppressWarnings({"UnstableApiUsage", "unused"})
+@SuppressWarnings({"UnstableApiUsage", "unused", "unchecked", "ConstantConditions"})
 public final class PlayerArgumentType implements CustomArgumentType.Converted<Player, String> {
     private final @NotNull String tooltip;
-    private final @NotNull TextColor color;
+    private final @Nullable TextColor color;
+    private boolean haveTooltip = true;
 
     /**
      * Creates a new PlayerArgumentType with a custom tooltip and color.
@@ -36,7 +39,7 @@ public final class PlayerArgumentType implements CustomArgumentType.Converted<Pl
      * @param tooltip The tooltip to display when providing suggestions.
      * @param color   The color of the tooltip.
      */
-    public PlayerArgumentType(@NotNull String tooltip, @NotNull TextColor color) {
+    public PlayerArgumentType(@NotNull String tooltip, @Nullable TextColor color) {
         this.tooltip = tooltip;
         this.color = color;
     }
@@ -87,6 +90,35 @@ public final class PlayerArgumentType implements CustomArgumentType.Converted<Pl
         return new PlayerArgumentType(tooltip, color);
     }
 
+    /**
+     * Returns whether the player argument type has a tooltip.
+     *
+     * @return True if the player argument type has a tooltip, false otherwise.
+     */
+    public boolean hasTooltip() {
+        return haveTooltip;
+    }
+
+    /**
+     * Sets the suggestions to not have a tooltip.
+     *
+     * @return The current PlayerArgumentType instance.
+     */
+    public PlayerArgumentType withoutTooltip() {
+        haveTooltip = false;
+        return this;
+    }
+
+    /**
+     * Sets the suggestions to have a tooltip.
+     *
+     * @return The current PlayerArgumentType instance.
+     */
+    public PlayerArgumentType withTooltip() {
+        haveTooltip = true;
+        return this;
+    }
+
     @Override
     public @NotNull Player convert(@NotNull String nativeType) throws CommandSyntaxException {
         if (nativeType.length() < 3) {
@@ -118,23 +150,34 @@ public final class PlayerArgumentType implements CustomArgumentType.Converted<Pl
     }
 
     @Override
-    @SuppressWarnings("unchecked")
     public <S> @NotNull CompletableFuture<Suggestions> listSuggestions(@NotNull CommandContext<S> context, @NotNull SuggestionsBuilder builder) {
         try {
+            if (!haveTooltip) {
+                Bukkit.getOnlinePlayers()
+                        .parallelStream()
+                        .filter(player -> player.getName().startsWith(builder.getInput().substring(builder.getInput().lastIndexOf(" ") + 1)))
+                        .forEach(player -> builder.suggest(player.getName()));
+                return builder.buildFuture();
+            }
             Bukkit.getOnlinePlayers()
                     .parallelStream()
                     .filter(player -> player.getName().startsWith(builder.getInput().substring(builder.getInput().lastIndexOf(" ") + 1)))
-                    .forEach(player -> builder.suggest(player.getName(), MessageComponentSerializer.message()
-                            .serialize(Component.text(tooltip.replaceAll("<player>", player.getName()))
-                                    .color(color))));
+                    .forEach(player -> {
+                        SuggestionsBuilder suggest = builder.suggest(player.getName());
+                        builder.suggest(player.getName(), MessageComponentSerializer.message()
+                                .serialize(Component.text(tooltip.replaceAll("<player>", player.getName()))
+                                        .color(color)));
+                    });
             return builder.buildFuture();
         } catch (@NotNull Exception e) {
             try {
-                Field resultField = SuggestionsBuilder.class.getDeclaredField("result");
+                Field resultField = builder.getClass().getDeclaredField("result");
                 resultField.setAccessible(true);
                 List<Suggestion> result = (List<Suggestion>) resultField.get(builder);
                 result.clear();
             } catch (Exception ex) {
+                ComponentLogger.logger("CommandUtils")
+                        .error("Failed to clear suggestions", e);
                 return Suggestions.empty();
             }
             Bukkit.getOnlinePlayers()
