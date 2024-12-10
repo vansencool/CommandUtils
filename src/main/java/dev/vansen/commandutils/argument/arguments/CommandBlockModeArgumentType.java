@@ -1,6 +1,5 @@
 package dev.vansen.commandutils.argument.arguments;
 
-import com.mojang.brigadier.Message;
 import com.mojang.brigadier.StringReader;
 import com.mojang.brigadier.arguments.ArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
@@ -157,8 +156,7 @@ public class CommandBlockModeArgumentType implements CustomArgumentType<String, 
         String input = reader.readString();
         if (ignoreCase) input = input.toLowerCase();
         if (!input.equals("chain") && !input.equals("repeat") && !input.equals("impulse")) {
-            Message message = MessageComponentSerializer.message().serialize(Component.text("Invalid command block mode! Valid modes: chain, repeat, impulse"));
-            throw new CommandSyntaxException(new SimpleCommandExceptionType(message), message);
+            throw new SimpleCommandExceptionType(MessageComponentSerializer.message().serialize(Component.text("Invalid command block mode! Valid modes: chain, repeat, impulse"))).create();
         }
         if (giveAsLowerCase) input = input.toLowerCase();
         return giveAsLowerCase ? input : reader.readString();
@@ -166,21 +164,19 @@ public class CommandBlockModeArgumentType implements CustomArgumentType<String, 
 
     @Override
     public @NotNull ArgumentType<String> getNativeType() {
-        return StringArgumentType.string();
+        return StringArgumentType.word();
     }
 
     @Override
     public <S> @NotNull CompletableFuture<Suggestions> listSuggestions(final @NotNull CommandContext<S> context, final @NotNull SuggestionsBuilder builder) {
-        if (!haveTooltip) {
-            Stream.of("chain", "repeat", "impulse")
-                    .filter(mode -> mode.startsWith(builder.getInput().substring(builder.getInput().lastIndexOf(" ") + 1)))
-                    .forEach(builder::suggest);
-            return builder.buildFuture();
-        }
         Stream.of("chain", "repeat", "impulse")
                 .filter(mode -> mode.startsWith(builder.getInput().substring(builder.getInput().lastIndexOf(" ") + 1)))
-                .forEach(mode -> builder.suggest(mode, MessageComponentSerializer.message().serialize(Component.text(tooltip.replaceAll("<mode>", mode))
-                        .color(color))));
+                .forEach(mode -> {
+                    if (!haveTooltip) builder.suggest(mode);
+                    else
+                        builder.suggest(mode, MessageComponentSerializer.message().serialize(Component.text(tooltip.replaceAll("<mode>", mode))
+                                .color(color)));
+                });
         return builder.buildFuture();
     }
 }

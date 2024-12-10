@@ -1,6 +1,5 @@
 package dev.vansen.commandutils.argument.arguments;
 
-import com.mojang.brigadier.Message;
 import com.mojang.brigadier.arguments.ArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
@@ -122,23 +121,19 @@ public final class PlayerArgumentType implements CustomArgumentType.Converted<Pl
     @Override
     public @NotNull Player convert(@NotNull String nativeType) throws CommandSyntaxException {
         if (nativeType.length() < 3) {
-            Message message = MessageComponentSerializer.message().serialize(Component
-                    .text("Too short player name!"));
-            throw new CommandSyntaxException(new SimpleCommandExceptionType(message), message);
+            throw new SimpleCommandExceptionType(MessageComponentSerializer.message().serialize(Component
+                    .text("Too short player name! Enter a name within 3-16 characters"))).create();
         }
         if (nativeType.length() > 16) {
-            Message message = MessageComponentSerializer.message().serialize(Component
-                    .text("Too long player name!"));
-            throw new CommandSyntaxException(new SimpleCommandExceptionType(message), message);
+            throw new SimpleCommandExceptionType(MessageComponentSerializer.message().serialize(Component
+                    .text("Too long player name! Enter a name within 3-16 characters"))).create();
         }
         if (Bukkit.getPlayerExact(nativeType) == null) {
-            Message message = MessageComponentSerializer.message().serialize(Component.text("Invalid player ")
+            throw new SimpleCommandExceptionType(MessageComponentSerializer.message().serialize(Component.text("Invalid player ")
                     .append(Component.text(
                             nativeType + "!"
                     ))
-                    .color(TextColor.fromHexString("#ff576d")));
-
-            throw new CommandSyntaxException(new SimpleCommandExceptionType(message), message);
+                    .color(TextColor.fromHexString("#ff576d")))).create();
         }
 
         return Objects.requireNonNull(Bukkit.getPlayerExact(nativeType));

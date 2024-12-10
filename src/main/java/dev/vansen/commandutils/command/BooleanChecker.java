@@ -1,7 +1,7 @@
 package dev.vansen.commandutils.command;
 
 /**
- * A functional interface representing a boolean check.
+ * An interface representing a boolean check.
  * <p>
  * Implementations of this interface should provide a single method, {@link #check()},
  * which returns a boolean value indicating the result of the check.

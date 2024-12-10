@@ -4,14 +4,14 @@ import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.mojang.brigadier.arguments.ArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.builder.RequiredArgumentBuilder;
+import dev.vansen.commandutils.CommandUtils;
 import dev.vansen.commandutils.argument.AbstractCommandArgument;
 import dev.vansen.commandutils.argument.Argument;
 import dev.vansen.commandutils.argument.ArgumentNester;
 import dev.vansen.commandutils.argument.CommandArgument;
+import dev.vansen.commandutils.argument.finder.ArgumentString;
 import dev.vansen.commandutils.command.CommandExecutor;
-import dev.vansen.commandutils.command.CommandWrapper;
-import dev.vansen.commandutils.command.ExecutableSender;
-import dev.vansen.commandutils.command.Position;
+import dev.vansen.commandutils.command.*;
 import dev.vansen.commandutils.completer.CompletionHandler;
 import dev.vansen.commandutils.completer.SuggestionsBuilderWrapper;
 import dev.vansen.commandutils.exceptions.CmdException;
@@ -28,6 +28,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Predicate;
 
 /**
  * Represents a subcommand in a command.
@@ -520,6 +521,62 @@ public final class SubCommand {
     }
 
     /**
+     * Adds an argument to the subcommand.
+     *
+     * @param type the type of the argument.
+     * @param name the name of the argument.
+     * @return this {@link SubCommand} instance for chaining.
+     */
+    @NotNull
+    @CanIgnoreReturnValue
+    public SubCommand argument(@NotNull String name, @NotNull String type) {
+        return argument(type, ArgumentString.fromString(name));
+    }
+
+    /**
+     * Adds an argument to the subcommand.
+     *
+     * @param type    the type of the argument.
+     * @param name    the name of the argument.
+     * @param handler the {@link CompletionHandler} for the argument.
+     * @return this {@link SubCommand} instance for chaining.
+     */
+    @NotNull
+    @CanIgnoreReturnValue
+    public SubCommand argument(@NotNull String name, @NotNull String type, CompletionHandler handler) {
+        return argument(type, ArgumentString.fromString(name), handler);
+    }
+
+    /**
+     * Adds an argument to the subcommand.
+     *
+     * @param type     the type of the argument.
+     * @param name     the name of the argument.
+     * @param executor the {@link CommandExecutor} to be executed when the argument is provided.
+     * @return this {@link CommandUtils} instance for chaining.
+     */
+    @NotNull
+    @CanIgnoreReturnValue
+    public SubCommand argument(@NotNull String name, @NotNull String type, @NotNull CommandExecutor executor) {
+        return argument(type, ArgumentString.fromString(name), executor);
+    }
+
+    /**
+     * Adds an argument to the subcommand.
+     *
+     * @param type     the type of the argument.
+     * @param name     the name of the argument.
+     * @param executor the {@link CommandExecutor} to be executed when the argument is provided.
+     * @param handler  the {@link CompletionHandler} for the argument.
+     * @return this {@link SubCommand} instance for chaining.
+     */
+    @NotNull
+    @CanIgnoreReturnValue
+    public SubCommand argument(@NotNull String name, @NotNull String type, @NotNull CommandExecutor executor, CompletionHandler handler) {
+        return argument(type, ArgumentString.fromString(name), executor, handler);
+    }
+
+    /**
      * Adds a subcommand to the subcommand.
      * Subcommands are separate execution paths that have their own logic.
      *
@@ -641,6 +698,32 @@ public final class SubCommand {
         } else if (permission.getPermission() != null) {
             builder.requires(consumer -> consumer.getSender().hasPermission(permission.getPermission()));
         }
+        return this;
+    }
+
+    /**
+     * The requirement of the subcommand, if the requirement is not met the subcommand will not execute, and not show in tab complete either.
+     *
+     * @param requirement the {@link Predicate} for the requirement
+     * @return this {@link SubCommand} instance for chaining
+     */
+    @NotNull
+    @CanIgnoreReturnValue
+    public SubCommand requirement(@NotNull Predicate<CommandRequirement> requirement) {
+        builder.requires(consumer -> requirement.test(new CommandRequirement(consumer)));
+        return this;
+    }
+
+    /**
+     * The requirement of the subcommand, if the requirement is not met the subcommand will not execute, and not show in tab complete either.
+     *
+     * @param checker the {@link BooleanChecker} for the requirement
+     * @return this {@link SubCommand} instance for chaining
+     */
+    @NotNull
+    @CanIgnoreReturnValue
+    public SubCommand requirement(@NotNull BooleanChecker checker) {
+        builder.requires(consumer -> checker.check());
         return this;
     }
 

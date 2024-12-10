@@ -2,7 +2,9 @@ package dev.vansen.commandutils.command;
 
 import com.mojang.brigadier.context.CommandContext;
 import dev.vansen.commandutils.exceptions.CmdException;
+import dev.vansen.commandutils.legacy.LegacyColorsTranslator;
 import dev.vansen.commandutils.messages.MessageTypes;
+import dev.vansen.commandutils.messages.SendType;
 import dev.vansen.commandutils.sender.SenderTypes;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 import net.kyori.adventure.text.Component;
@@ -36,7 +38,7 @@ public record CommandWrapper(CommandContext<CommandSourceStack> context) {
     /**
      * Constructs a new {@link CommandWrapper} with the given command context.
      *
-     * @param context the command context to be wrapped. Must not be null.
+     * @param context the command context to be wrapped
      */
     public CommandWrapper(@NotNull CommandContext<CommandSourceStack> context) {
         this.context = context;
@@ -153,7 +155,7 @@ public record CommandWrapper(CommandContext<CommandSourceStack> context) {
     public void response(@Nullable String... messages) {
         Arrays.stream(messages)
                 .filter(Objects::nonNull)
-                .forEach(message -> sender().sendRichMessage(message));
+                .forEach(message -> sender().sendRichMessage(LegacyColorsTranslator.translate(message)));
     }
 
     /**
@@ -173,7 +175,7 @@ public record CommandWrapper(CommandContext<CommandSourceStack> context) {
      * @param messages the messages to send
      */
     public void response(@NotNull Iterable<String> messages) {
-        messages.forEach(message -> sender().sendRichMessage(message));
+        messages.forEach(message -> sender().sendRichMessage(LegacyColorsTranslator.translate(message)));
     }
 
     /**
@@ -194,7 +196,7 @@ public record CommandWrapper(CommandContext<CommandSourceStack> context) {
         if (!isPlayer()) return;
         Arrays.stream(messages)
                 .filter(Objects::nonNull)
-                .forEach(message -> sender().sendActionBar(MiniMessage.miniMessage().deserializeOrNull(message)));
+                .forEach(message -> sender().sendActionBar(MiniMessage.miniMessage().deserializeOrNull(LegacyColorsTranslator.translate(message))));
     }
 
     /**
@@ -216,7 +218,7 @@ public record CommandWrapper(CommandContext<CommandSourceStack> context) {
      */
     public void actionBar(@NotNull Iterable<String> messages) {
         if (!isPlayer()) return;
-        messages.forEach(message -> sender().sendActionBar(MiniMessage.miniMessage().deserializeOrNull(message)));
+        messages.forEach(message -> sender().sendActionBar(MiniMessage.miniMessage().deserializeOrNull(LegacyColorsTranslator.translate(message))));
     }
 
     /**
@@ -236,10 +238,15 @@ public record CommandWrapper(CommandContext<CommandSourceStack> context) {
      */
     public void response(@Nullable MessageTypes message) {
         if (message == null) return;
-        switch (message.type()) {
-            case MESSAGE -> sender().sendRichMessage(message.message());
-            case ACTION_BAR -> sender().sendActionBar(MiniMessage.miniMessage().deserializeOrNull(message.message()));
-        }
+        message.messages()
+                .forEach(m -> {
+                    if (message.type() == SendType.BOTH) {
+                        sender().sendRichMessage(LegacyColorsTranslator.translate(m));
+                        sender().sendActionBar(MiniMessage.miniMessage().deserializeOrNull(LegacyColorsTranslator.translate(m)));
+                    } else if (message.type() == SendType.ACTION_BAR) {
+                        sender().sendActionBar(MiniMessage.miniMessage().deserializeOrNull(LegacyColorsTranslator.translate(m)));
+                    } else sender().sendRichMessage(LegacyColorsTranslator.translate(m));
+                });
     }
 
     /**
@@ -1050,6 +1057,57 @@ public record CommandWrapper(CommandContext<CommandSourceStack> context) {
     }
 
     /**
+     * Retrieves the sender type as a human-readable string.
+     *
+     * @return the sender type as a human-readable string.
+     */
+    public String senderTypeString() {
+        return switch (senderType()) {
+            case PLAYER -> "Sent by a player";
+            case CONSOLE -> "Sent from the console";
+            case REMOTE_CONSOLE -> "Sent from a remote console";
+            case ENTITY -> "Sent by an entity";
+            case COMMAND_BLOCK -> "Sent by a command block";
+            case PROXIED -> "Sent by a proxied command sender";
+            default -> "Unknown sender type";
+        };
+    }
+
+    /**
+     * Retrieves the sender type as a short code.
+     *
+     * @return the sender type as a short code, can be "P", "C", "R", "E", "B", "X" or "?".
+     */
+    public String senderTypeCode() {
+        return switch (senderType()) {
+            case PLAYER -> "P";
+            case CONSOLE -> "C";
+            case REMOTE_CONSOLE -> "R";
+            case ENTITY -> "E";
+            case COMMAND_BLOCK -> "B";
+            case PROXIED -> "X";
+            default -> "?";
+        };
+    }
+
+    /**
+     * Retrieves a description of the sender type.
+     *
+     * @return a description of the sender type.
+     */
+    public String senderTypeDescription() {
+        return switch (senderType()) {
+            case PLAYER -> "A player is a human user who is interacting with the game.";
+            case CONSOLE -> "The console is the main interface for administering the game.";
+            case REMOTE_CONSOLE -> "A remote console is a console that is accessed from a remote location.";
+            case ENTITY -> "An entity is a non-player character (such as mobs) in the game.";
+            case COMMAND_BLOCK -> "A command block is a block that can execute commands.";
+            case PROXIED -> "A proxied sender is a command sender that is proxied through /execute, or similar.";
+            default -> "Unknown sender type";
+        };
+    }
+
+    /**
      * Checks if the sender is a player.
      *
      * @return true if the sender is a player, false otherwise.
@@ -1618,7 +1676,7 @@ public record CommandWrapper(CommandContext<CommandSourceStack> context) {
      */
     public boolean canExecute(@NotNull SenderTypes... types) {
         return Arrays.stream(types)
-                .anyMatch(this::canExecute);
+                .anyMatch(type -> senderType() == type);
     }
 
     /**

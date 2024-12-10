@@ -6,10 +6,9 @@ import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import dev.vansen.commandutils.argument.arguments.ColorArgumentType;
 import dev.vansen.commandutils.argument.arguments.CommandBlockModeArgumentType;
 import dev.vansen.commandutils.argument.arguments.PlayerArgumentType;
+import dev.vansen.commandutils.argument.finder.ArgumentString;
 import dev.vansen.commandutils.command.CommandExecutor;
-import dev.vansen.commandutils.command.CommandWrapper;
-import dev.vansen.commandutils.command.ExecutableSender;
-import dev.vansen.commandutils.command.Position;
+import dev.vansen.commandutils.command.*;
 import dev.vansen.commandutils.completer.CompletionHandler;
 import dev.vansen.commandutils.completer.SuggestionsBuilderWrapper;
 import dev.vansen.commandutils.exceptions.CmdException;
@@ -29,6 +28,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Predicate;
 
 /**
  * Represents a command argument in the command system.
@@ -114,6 +114,18 @@ public final class CommandArgument {
     }
 
     /**
+     * Factory method to create a new instance of {@link CommandArgument} with a name and ArgumentType.
+     *
+     * @param name the name of the argument.
+     * @param type the type of the argument.
+     * @return a new {@link CommandArgument} instance.
+     */
+    @NotNull
+    public static CommandArgument of(@NotNull String name, @NotNull ArgumentType<?> type) {
+        return new CommandArgument(name, type);
+    }
+
+    /**
      * Factory method to create a new instance of {@link CommandArgument} with a name, ArgumentType, and CompletionHandler.
      *
      * @param name    the name of the argument.
@@ -134,8 +146,21 @@ public final class CommandArgument {
      * @return a new {@link CommandArgument} instance.
      */
     @NotNull
-    public static CommandArgument of(@NotNull String name, @NotNull ArgumentType<?> type) {
-        return new CommandArgument(name, type);
+    public static CommandArgument of(@NotNull String name, @NotNull String type) {
+        return new CommandArgument(name, ArgumentString.fromString(type));
+    }
+
+    /**
+     * Factory method to create a new instance of {@link CommandArgument} with a name, ArgumentType, and CompletionHandler.
+     *
+     * @param name    the name of the argument.
+     * @param type    the type of the argument.
+     * @param handler the completion handler.
+     * @return a new {@link CommandArgument} instance.
+     */
+    @NotNull
+    public static CommandArgument of(@NotNull String name, @NotNull String type, @NotNull CompletionHandler handler) {
+        return new CommandArgument(name, ArgumentString.fromString(type), handler);
     }
 
     /**
@@ -273,6 +298,17 @@ public final class CommandArgument {
     }
 
     /**
+     * Creates a new named color argument with the specified name.
+     *
+     * @param name the name of the argument.
+     * @return a new {@link CommandArgument} instance representing a named color argument.
+     */
+    @NotNull
+    public static CommandArgument namedColor(@NotNull String name) {
+        return new CommandArgument(name, ArgumentTypes.namedColor());
+    }
+
+    /**
      * Creates a new block mode argument with the specified name.
      *
      * @param name the name of the argument.
@@ -314,6 +350,17 @@ public final class CommandArgument {
     @NotNull
     public static CommandArgument gameMode(@NotNull String name) {
         return new CommandArgument(name, ArgumentTypes.gameMode());
+    }
+
+    /**
+     * Creates a new uuid argument with the specified name.
+     *
+     * @param name the name of the argument.
+     * @return a new {@link CommandArgument} instance representing a uuid argument.
+     */
+    @NotNull
+    public static CommandArgument uuid(@NotNull String name) {
+        return new CommandArgument(name, ArgumentTypes.uuid());
     }
 
     private void execute() {
@@ -768,6 +815,62 @@ public final class CommandArgument {
     }
 
     /**
+     * Adds an argument to the argument.
+     *
+     * @param type the type of the argument.
+     * @param name the name of the argument.
+     * @return this {@link CommandArgument} instance for chaining.
+     */
+    @NotNull
+    @CanIgnoreReturnValue
+    public CommandArgument argument(@NotNull String name, @NotNull String type) {
+        return argument(type, ArgumentString.fromString(name));
+    }
+
+    /**
+     * Adds an argument to the argument.
+     *
+     * @param type    the type of the argument.
+     * @param name    the name of the argument.
+     * @param handler the {@link CompletionHandler} for the argument.
+     * @return this {@link CommandArgument} instance for chaining.
+     */
+    @NotNull
+    @CanIgnoreReturnValue
+    public CommandArgument argument(@NotNull String name, @NotNull String type, CompletionHandler handler) {
+        return argument(type, ArgumentString.fromString(name), handler);
+    }
+
+    /**
+     * Adds an argument to the argument.
+     *
+     * @param type     the type of the argument.
+     * @param name     the name of the argument.
+     * @param executor the {@link CommandExecutor} to be executed when the argument is provided.
+     * @return this {@link CommandArgument} instance for chaining.
+     */
+    @NotNull
+    @CanIgnoreReturnValue
+    public CommandArgument argument(@NotNull String name, @NotNull String type, @NotNull CommandExecutor executor) {
+        return argument(type, ArgumentString.fromString(name), executor);
+    }
+
+    /**
+     * Adds an argument to the argument.
+     *
+     * @param type     the type of the argument.
+     * @param name     the name of the argument.
+     * @param executor the {@link CommandExecutor} to be executed when the argument is provided.
+     * @param handler  the {@link CompletionHandler} for the argument.
+     * @return this {@link CommandArgument} instance for chaining.
+     */
+    @NotNull
+    @CanIgnoreReturnValue
+    public CommandArgument argument(@NotNull String name, @NotNull String type, @NotNull CommandExecutor executor, CompletionHandler handler) {
+        return argument(type, ArgumentString.fromString(name), executor, handler);
+    }
+
+    /**
      * Adds a completion handler to the main argument.
      *
      * @param handler the {@link CompletionHandler} completion handler for the argument.
@@ -885,6 +988,32 @@ public final class CommandArgument {
         } else if (permission.getPermission() != null) {
             argument.requires(consumer -> consumer.getSender().hasPermission(permission.getPermission()));
         }
+        return this;
+    }
+
+    /**
+     * The requirement of the subcommand, if the requirement is not met the argument will not execute.
+     *
+     * @param requirement the {@link Predicate} for the requirement
+     * @return this {@link CommandArgument} instance for chaining
+     */
+    @NotNull
+    @CanIgnoreReturnValue
+    public CommandArgument requirement(@NotNull Predicate<CommandRequirement> requirement) {
+        argument.requires(consumer -> requirement.test(new CommandRequirement(consumer)));
+        return this;
+    }
+
+    /**
+     * The requirement of the argument, if the requirement is not met the argument will not execute.
+     *
+     * @param checker the {@link BooleanChecker} for the requirement
+     * @return this {@link CommandArgument} instance for chaining
+     */
+    @NotNull
+    @CanIgnoreReturnValue
+    public CommandArgument requirement(@NotNull BooleanChecker checker) {
+        argument.requires(consumer -> checker.check());
         return this;
     }
 

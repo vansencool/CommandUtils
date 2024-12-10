@@ -14,6 +14,9 @@ import org.jetbrains.annotations.NotNull;
 import java.lang.reflect.Method;
 import java.util.List;
 
+/**
+ * This is generally not recommended to use, since it limits the ability to nest arguments, and it is generally recommended to use {@link SimpleCommandArgument} since it allows easier command argument management, and saves alot of time in coding.
+ */
 @SuppressWarnings("unused")
 public abstract class AbstractCommandArgument {
 

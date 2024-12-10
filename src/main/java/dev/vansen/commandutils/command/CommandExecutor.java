@@ -5,6 +5,7 @@ import org.jetbrains.annotations.NotNull;
 /**
  * Represents a command executor responsible for handling the execution logic of commands.
  */
+@FunctionalInterface
 public interface CommandExecutor {
 
     /**

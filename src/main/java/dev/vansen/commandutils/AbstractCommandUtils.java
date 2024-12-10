@@ -17,6 +17,9 @@ import org.jetbrains.annotations.NotNull;
 import java.lang.reflect.Method;
 import java.util.List;
 
+/**
+ * This is generally not recommended to use, since it limits the ability to nest arguments, and it is generally recommended to use {@link SimpleCommandUtils} since it allows easier command management, and saves alot of time in coding.
+ */
 @SuppressWarnings("unused")
 public abstract class AbstractCommandUtils {
     private final String name;

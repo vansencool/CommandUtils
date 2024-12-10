@@ -7,7 +7,7 @@ import org.jetbrains.annotations.NotNull;
 import java.util.List;
 
 /**
- * Represents a sender that can execute a command.
+ * Represents sender(s) that can execute the default executor.
  */
 @SuppressWarnings("unused")
 public final class ExecutableSender {
@@ -46,17 +46,6 @@ public final class ExecutableSender {
     }
 
     /**
-     * Returns a new instance of the ExecutableSender.Builder class.
-     *
-     * @return a new instance of the ExecutableSender.Builder class.
-     */
-    @NotNull
-    @CanIgnoreReturnValue
-    public Builder builder() {
-        return new Builder();
-    }
-
-    /**
      * Returns the types of senders that are allowed to execute the command.
      *
      * @return the types of senders that are allowed to execute the command.
@@ -64,49 +53,5 @@ public final class ExecutableSender {
     @NotNull
     public SenderTypes[] types() {
         return senderTypes;
-    }
-
-    /**
-     * A builder class for creating new instances of ExecutableSender.
-     */
-    public static class Builder {
-        private SenderTypes[] senderTypes;
-
-        /**
-         * Sets the types of senders that are allowed to execute the command.
-         *
-         * @param types the types of senders that are allowed to execute the command.
-         * @return this Builder instance.
-         */
-        @NotNull
-        @CanIgnoreReturnValue
-        public Builder type(@NotNull SenderTypes... types) {
-            senderTypes = types;
-            return this;
-        }
-
-        /**
-         * Sets the types of senders that are allowed to execute the command from a list.
-         *
-         * @param types the list of types of senders that are allowed to execute the command.
-         * @return this Builder instance.
-         */
-        @NotNull
-        @CanIgnoreReturnValue
-        public Builder type(@NotNull List<SenderTypes> types) {
-            senderTypes = types.toArray(new SenderTypes[0]);
-            return this;
-        }
-
-        /**
-         * Builds a new instance of ExecutableSender with the specified sender types.
-         *
-         * @return a new instance of ExecutableSender.
-         */
-        @NotNull
-        @CanIgnoreReturnValue
-        public ExecutableSender build() {
-            return new ExecutableSender(senderTypes);
-        }
     }
 }

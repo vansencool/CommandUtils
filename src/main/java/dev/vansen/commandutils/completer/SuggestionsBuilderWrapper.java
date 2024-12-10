@@ -4,6 +4,8 @@ import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.mojang.brigadier.context.StringRange;
 import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
+import dev.vansen.commandutils.completer.info.SuggestionsHelper;
+import dev.vansen.commandutils.legacy.LegacyColorsTranslator;
 import io.papermc.paper.command.brigadier.MessageComponentSerializer;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
@@ -11,6 +13,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
@@ -34,22 +37,9 @@ public final class SuggestionsBuilderWrapper {
     }
 
     /**
-     * Adds a suggestion to the list of completions.
+     * Adds suggestions to the list of completions.
      *
-     * @param suggestion the text to be suggested. This should not be null.
-     * @return this instance for method chaining.
-     */
-    @NotNull
-    @CanIgnoreReturnValue
-    public SuggestionsBuilderWrapper suggest(@NotNull String suggestion) {
-        builder.suggest(suggestion);
-        return this;
-    }
-
-    /**
-     * Adds multiple suggestions to the list of completions.
-     *
-     * @param suggestions the suggestions to be added. This should not be null.
+     * @param suggestions the suggestions to be added.
      * @return this instance for method chaining.
      */
     @NotNull
@@ -61,9 +51,37 @@ public final class SuggestionsBuilderWrapper {
     }
 
     /**
+     * Adds suggestions to the list of completions with an associated tooltip.
+     *
+     * @param suggestions the suggestions to be added.
+     * @return this instance for method chaining.
+     */
+    @NotNull
+    @CanIgnoreReturnValue
+    public SuggestionsBuilderWrapper suggest(@NotNull Map<String, String> suggestions) {
+        suggestions.forEach((suggestion, tooltip) -> builder.suggest(suggestion, MessageComponentSerializer.message().serializeOrNull(MiniMessage.miniMessage().deserializeOrNull(LegacyColorsTranslator.translate(tooltip)))));
+        return this;
+    }
+
+    /**
+     * Adds suggestions to the list of completions with an associated tooltip.
+     *
+     * @param suggestions the suggestions to be added.
+     * @return this instance for method chaining.
+     */
+    @SafeVarargs
+    @NotNull
+    @CanIgnoreReturnValue
+    public final SuggestionsBuilderWrapper suggest(@NotNull Map<String, Component>... suggestions) {
+        Arrays.stream(suggestions)
+                .forEach(map -> map.forEach((suggestion, tooltip) -> builder.suggest(suggestion, MessageComponentSerializer.message().serializeOrNull(tooltip))));
+        return this;
+    }
+
+    /**
      * Adds multiple suggestions to the list of completions.
      *
-     * @param suggestions the suggestions to be added. This should not be null.
+     * @param suggestions the suggestions to be added.
      * @return this instance for method chaining.
      */
     @NotNull
@@ -76,22 +94,22 @@ public final class SuggestionsBuilderWrapper {
     /**
      * Adds multiple suggestions to the list of completions with an associated tooltip.
      *
-     * @param suggestions the suggestions to be added. This should not be null.
-     * @param tooltip     the tooltip to be shown with the suggestion. This should not be null.
+     * @param suggestions the suggestions to be added.
+     * @param tooltip     the tooltip to be shown with the suggestion.
      * @return this instance for method chaining.
      */
     @NotNull
     @CanIgnoreReturnValue
     public SuggestionsBuilderWrapper suggest(@NotNull Iterable<Suggestion> suggestions, @NotNull String tooltip) {
-        suggestions.forEach(suggestion -> builder.suggest(suggestion.text(), MessageComponentSerializer.message().serializeOrNull(MiniMessage.miniMessage().deserializeOrNull(tooltip))));
+        suggestions.forEach(suggestion -> builder.suggest(suggestion.text(), MessageComponentSerializer.message().serializeOrNull(MiniMessage.miniMessage().deserializeOrNull(LegacyColorsTranslator.translate(tooltip)))));
         return this;
     }
 
     /**
      * Adds multiple suggestions to the list of completions with an associated tooltip.
      *
-     * @param suggestions the suggestions to be added. This should not be null.
-     * @param tooltip     the tooltip to be shown with the suggestion. This should not be null.
+     * @param suggestions the suggestions to be added.
+     * @param tooltip     the tooltip to be shown with the suggestion.
      * @return this instance for method chaining.
      */
     @NotNull
@@ -104,22 +122,22 @@ public final class SuggestionsBuilderWrapper {
     /**
      * Adds a suggestion to the list of completions with an associated tooltip.
      *
-     * @param suggestion the text to be suggested. This should not be null.
-     * @param tooltip    the tooltip to be shown with the suggestion. This should not be null.
+     * @param suggestion the text to be suggested.
+     * @param tooltip    the tooltip to be shown with the suggestion.
      * @return this instance for method chaining.
      */
     @NotNull
     @CanIgnoreReturnValue
     public SuggestionsBuilderWrapper suggest(@NotNull String suggestion, @NotNull String tooltip) {
-        builder.suggest(suggestion, MessageComponentSerializer.message().serializeOrNull(MiniMessage.miniMessage().deserializeOrNull(tooltip)));
+        builder.suggest(suggestion, MessageComponentSerializer.message().serializeOrNull(MiniMessage.miniMessage().deserializeOrNull(LegacyColorsTranslator.translate(tooltip))));
         return this;
     }
 
     /**
      * Adds a suggestion to the list of completions with an associated tooltip.
      *
-     * @param suggestion the text to be suggested. This should not be null.
-     * @param tooltip    the tooltip to be shown with the suggestion. This should not be null.
+     * @param suggestion the text to be suggested.
+     * @param tooltip    the tooltip to be shown with the suggestion.
      * @return this instance for method chaining.
      */
     @NotNull
@@ -132,7 +150,7 @@ public final class SuggestionsBuilderWrapper {
     /**
      * Adds a suggestion to the list of completions with an associated tooltip.
      *
-     * @param suggestion the suggestion to be added. This should not be null.
+     * @param suggestion the suggestion to be added.
      * @return this instance for method chaining.
      */
     @NotNull
@@ -143,6 +161,94 @@ public final class SuggestionsBuilderWrapper {
                         tooltip -> builder.suggest(suggestion.text(), tooltip),
                         () -> builder.suggest(suggestion.text()));
         return this;
+    }
+
+    /**
+     * Adds multiple suggestions to the list of completions.
+     *
+     * @param suggestions the suggestions to be added.
+     * @return this instance for method chaining.
+     */
+    @NotNull
+    @CanIgnoreReturnValue
+    public SuggestionsBuilderWrapper suggest(@NotNull Suggestion... suggestions) {
+        Arrays.stream(suggestions)
+                .forEach(this::suggest);
+        return this;
+    }
+
+    /**
+     * Adds a suggestion to the list of completions.
+     *
+     * @param value the suggestion to be added.
+     * @return this instance for method chaining.
+     */
+    @NotNull
+    @CanIgnoreReturnValue
+    public SuggestionsBuilderWrapper suggest(int value) {
+        builder.suggest(value);
+        return this;
+    }
+
+    /**
+     * Adds a suggestion to the list of completions with an associated tooltip.
+     *
+     * @param value   the suggestion to be added.
+     * @param tooltip the tooltip to be shown with the suggestion.
+     * @return this instance for method chaining.
+     */
+    @NotNull
+    @CanIgnoreReturnValue
+    public SuggestionsBuilderWrapper suggest(int value, @NotNull String tooltip) {
+        builder.suggest(value, MessageComponentSerializer.message().serializeOrNull(MiniMessage.miniMessage().deserializeOrNull(LegacyColorsTranslator.translate(tooltip))));
+        return this;
+    }
+
+    /**
+     * Returns the starting position of the suggestions.
+     *
+     * @return the starting position of the suggestions
+     */
+    public int start() {
+        return builder.getStart();
+    }
+
+    /**
+     * Returns the remaining text.
+     *
+     * @return the remaining text
+     */
+    public String remaining() {
+        return builder.getRemaining();
+    }
+
+    /**
+     * Returns the entire input text.
+     *
+     * @return the input text
+     */
+    public String input() {
+        return builder.getInput();
+    }
+
+    /**
+     * Returns the suggestions helper for this suggestions builder.
+     *
+     * @return the suggestions helper
+     */
+    public SuggestionsHelper helper() {
+        return new SuggestionsHelper(this);
+    }
+
+    /**
+     * Returns a new {@link SuggestionsBuilderWrapper} with the specified starting position.
+     *
+     * @param start the starting position
+     * @return a new {@link SuggestionsBuilderWrapper} with the specified starting position
+     */
+    @NotNull
+    public SuggestionsBuilderWrapper offset(int start) {
+        return new SuggestionsBuilderWrapper(builder.createOffset(start));
     }
 
     /**
@@ -167,7 +273,7 @@ public final class SuggestionsBuilderWrapper {
 
     /**
      * Builds and returns the suggestions as a {@link Suggestions}.
-     * This will only work if this is called in a separate thread.
+     * This will usually only work if the call is from CompletableFuture.
      *
      * @return a {@link Suggestions}.
      */
@@ -185,5 +291,16 @@ public final class SuggestionsBuilderWrapper {
     @NotNull
     public CompletableFuture<Suggestions> build() {
         return builder.buildFuture();
+    }
+
+    /**
+     * Returns the underlying {@link SuggestionsBuilder}.
+     * This would generally not be needed, but it is provided for convenience in-case you need to access the builder directly (likely for advanced usage).
+     *
+     * @return the underlying {@link SuggestionsBuilder}
+     */
+    @NotNull
+    public SuggestionsBuilder builder() {
+        return builder;
     }
 }

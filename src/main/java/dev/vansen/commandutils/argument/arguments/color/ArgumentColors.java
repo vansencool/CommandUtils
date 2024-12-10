@@ -8,7 +8,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.stream.Collectors;
 
-@SuppressWarnings("unused")
+@SuppressWarnings({"unused", "Typos"})
 public class ArgumentColors {
 
     /**
@@ -20,7 +20,11 @@ public class ArgumentColors {
         defaultColors();
     }
 
+    /**
+     * Adds default colors to the color map, this should be called before any other colors are added (which should be done by the static initializer)
+     */
     public static void defaultColors() {
+        if (!COLOR_MAP.isEmpty()) return;
         addColor(
                 Map.entry("black", "#000000"),
                 Map.entry("dark_blue", "#0000aa"),
@@ -227,8 +231,7 @@ public class ArgumentColors {
                 Map.entry("peach_puff", "#ffdab9"),
                 Map.entry("pewter_blue", "#8ba8b7"),
                 Map.entry("quartz", "#51484f"),
-                Map.entry("redwood", "#a45a52")
-        );
+                Map.entry("redwood", "#a45a52"));
     }
 
     /**

@@ -1,6 +1,5 @@
 package dev.vansen.commandutils.argument.arguments;
 
-import com.mojang.brigadier.Message;
 import com.mojang.brigadier.arguments.ArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
@@ -128,8 +127,7 @@ public final class ColorArgumentType implements CustomArgumentType.Converted<Tex
                 return Objects.requireNonNull(TextColor.fromHexString(nativeType));
             }
         } catch (@NotNull Exception e) {
-            Message message = MessageComponentSerializer.message().serialize(Component.text("Invalid color, Double quote the hex code or use a color name!"));
-            throw new CommandSyntaxException(new SimpleCommandExceptionType(message), message);
+            throw new SimpleCommandExceptionType(MessageComponentSerializer.message().serialize(Component.text("Invalid color, Double quote the hex code or use a valid color name!"))).create();
         }
     }
 

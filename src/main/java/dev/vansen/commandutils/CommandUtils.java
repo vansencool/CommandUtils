@@ -9,10 +9,9 @@ import dev.vansen.commandutils.argument.AbstractCommandArgument;
 import dev.vansen.commandutils.argument.Argument;
 import dev.vansen.commandutils.argument.ArgumentNester;
 import dev.vansen.commandutils.argument.CommandArgument;
+import dev.vansen.commandutils.argument.finder.ArgumentString;
 import dev.vansen.commandutils.command.CommandExecutor;
-import dev.vansen.commandutils.command.CommandWrapper;
-import dev.vansen.commandutils.command.ExecutableSender;
-import dev.vansen.commandutils.command.Position;
+import dev.vansen.commandutils.command.*;
 import dev.vansen.commandutils.completer.CompletionHandler;
 import dev.vansen.commandutils.completer.SuggestionsBuilderWrapper;
 import dev.vansen.commandutils.exceptions.CmdException;
@@ -40,6 +39,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Predicate;
 
 /**
  * Utility class for building and registering Minecraft commands using Brigadier.
@@ -566,6 +566,62 @@ public final class CommandUtils {
     }
 
     /**
+     * Adds an argument to the command.
+     *
+     * @param type the type of the argument.
+     * @param name the name of the argument.
+     * @return this {@link CommandUtils} instance for chaining.
+     */
+    @NotNull
+    @CanIgnoreReturnValue
+    public CommandUtils argument(@NotNull String name, @NotNull String type) {
+        return argument(ArgumentString.fromString(type), name);
+    }
+
+    /**
+     * Adds an argument to the command.
+     *
+     * @param type    the type of the argument.
+     * @param name    the name of the argument.
+     * @param handler the {@link CompletionHandler} for the argument.
+     * @return this {@link CommandUtils} instance for chaining.
+     */
+    @NotNull
+    @CanIgnoreReturnValue
+    public CommandUtils argument(@NotNull String name, @NotNull String type, CompletionHandler handler) {
+        return argument(ArgumentString.fromString(type), name, handler);
+    }
+
+    /**
+     * Adds an argument to the command.
+     *
+     * @param type     the type of the argument.
+     * @param name     the name of the argument.
+     * @param executor the {@link CommandExecutor} to be executed when the argument is provided.
+     * @return this {@link CommandUtils} instance for chaining.
+     */
+    @NotNull
+    @CanIgnoreReturnValue
+    public CommandUtils argument(@NotNull String name, @NotNull String type, @NotNull CommandExecutor executor) {
+        return argument(ArgumentString.fromString(type), name, executor);
+    }
+
+    /**
+     * Adds an argument to the command.
+     *
+     * @param type     the type of the argument.
+     * @param name     the name of the argument.
+     * @param executor the {@link CommandExecutor} to be executed when the argument is provided.
+     * @param handler  the {@link CompletionHandler} for the argument.
+     * @return this {@link CommandUtils} instance for chaining.
+     */
+    @NotNull
+    @CanIgnoreReturnValue
+    public CommandUtils argument(@NotNull String name, @NotNull String type, @NotNull CommandExecutor executor, CompletionHandler handler) {
+        return argument(ArgumentString.fromString(type), name, executor, handler);
+    }
+
+    /**
      * Adds a completion handler to the last argument added to the command.
      *
      * @param handler the {@link CompletionHandler} completion handler for the argument.
@@ -674,6 +730,32 @@ public final class CommandUtils {
         } else if (permission.getPermission() != null) {
             builder.requires(consumer -> consumer.getSender().hasPermission(permission.getPermission()));
         }
+        return this;
+    }
+
+    /**
+     * The requirement of the command, if the requirement is not met the command will not execute, and not show in tab complete either.
+     *
+     * @param requirement the {@link Predicate} for the requirement
+     * @return this {@link CommandUtils} instance for chaining
+     */
+    @NotNull
+    @CanIgnoreReturnValue
+    public CommandUtils requirement(@NotNull Predicate<CommandRequirement> requirement) {
+        builder.requires(consumer -> requirement.test(new CommandRequirement(consumer)));
+        return this;
+    }
+
+    /**
+     * The requirement of the command, if the requirement is not met the command will not execute, and not show in tab complete either.
+     *
+     * @param checker the {@link BooleanChecker} for the requirement
+     * @return this {@link CommandUtils} instance for chaining
+     */
+    @NotNull
+    @CanIgnoreReturnValue
+    public CommandUtils requirement(@NotNull BooleanChecker checker) {
+        builder.requires(consumer -> checker.check());
         return this;
     }
 

@@ -13,6 +13,9 @@ import org.jetbrains.annotations.NotNull;
 import java.lang.reflect.Method;
 import java.util.List;
 
+/***
+ * This is generally not recommended to use, since it limits the ability to nest arguments, and it is generally recommended to use {@link SimpleSubCommand} since it allows easier subcommand management, and saves alot of time in coding.
+ */
 public abstract class AbstractSubCommand {
 
     private final String name;
