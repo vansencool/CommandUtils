@@ -157,12 +157,9 @@ public final class PlayerArgumentType implements CustomArgumentType.Converted<Pl
             Bukkit.getOnlinePlayers()
                     .parallelStream()
                     .filter(player -> player.getName().startsWith(builder.getInput().substring(builder.getInput().lastIndexOf(" ") + 1)))
-                    .forEach(player -> {
-                        SuggestionsBuilder suggest = builder.suggest(player.getName());
-                        builder.suggest(player.getName(), MessageComponentSerializer.message()
-                                .serialize(Component.text(tooltip.replaceAll("<player>", player.getName()))
-                                        .color(color)));
-                    });
+                    .forEach(player -> builder.suggest(player.getName(), MessageComponentSerializer.message()
+                            .serialize(Component.text(tooltip.replaceAll("<player>", player.getName()))
+                                    .color(color))));
             return builder.buildFuture();
         } catch (@NotNull Exception e) {
             try {
