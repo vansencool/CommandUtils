@@ -74,7 +74,7 @@ public final class PlayerArgumentType implements CustomArgumentType.Converted<Pl
      * @param tooltip The tooltip to display when providing suggestions.
      * @return A new PlayerArgumentType instance.
      */
-    public static @NotNull PlayerArgumentType player(String tooltip) {
+    public static @NotNull PlayerArgumentType player(@NotNull String tooltip) {
         return new PlayerArgumentType(tooltip);
     }
 
