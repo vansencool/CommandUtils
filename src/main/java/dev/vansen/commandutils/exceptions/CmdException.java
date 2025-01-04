@@ -1,6 +1,5 @@
 package dev.vansen.commandutils.exceptions;
 
-import dev.vansen.commandutils.legacy.LegacyColorsTranslator;
 import dev.vansen.commandutils.messages.MessageTypes;
 import dev.vansen.commandutils.messages.SendType;
 import net.kyori.adventure.text.Component;
@@ -84,17 +83,16 @@ public final class CmdException extends CommandException {
         if (sender == null) return;
         if (type != null && messages != null) {
             switch (type) {
-                case MESSAGE ->
-                        messages.forEach(message -> sender.sendRichMessage(LegacyColorsTranslator.translate(message)));
+                case MESSAGE -> messages.forEach(sender::sendRichMessage);
                 case ACTION_BAR ->
-                        messages.forEach(message -> sender.sendActionBar(MiniMessage.miniMessage().deserializeOrNull(LegacyColorsTranslator.translate(message))));
+                        messages.forEach(message -> sender.sendActionBar(MiniMessage.miniMessage().deserializeOrNull(message)));
                 case BOTH -> messages.forEach(message -> {
-                    sender.sendRichMessage(LegacyColorsTranslator.translate(message));
-                    sender.sendActionBar(MiniMessage.miniMessage().deserializeOrNull(LegacyColorsTranslator.translate(message)));
+                    sender.sendRichMessage(message);
+                    sender.sendActionBar(MiniMessage.miniMessage().deserializeOrNull(message));
                 });
             }
         }
         if (message != null) sender.sendMessage(message);
-        else if (getMessage() != null) sender.sendRichMessage(LegacyColorsTranslator.translate(getMessage()));
+        else if (getMessage() != null) sender.sendRichMessage(getMessage());
     }
 }

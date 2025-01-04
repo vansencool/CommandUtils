@@ -14,8 +14,8 @@ import java.util.concurrent.atomic.AtomicReference;
  */
 @SuppressWarnings({"unused", "unchecked"})
 public class ArgumentFinder<T> {
-    private final @NotNull AtomicReference<T> value = new AtomicReference<>();
     private static final ObjectArrayList<Class<?>> arguments = ObjectArrayList.of();
+    private final @NotNull AtomicReference<T> value = new AtomicReference<>();
     private final @NotNull CommandWrapper context;
     private final @NotNull String arg;
 

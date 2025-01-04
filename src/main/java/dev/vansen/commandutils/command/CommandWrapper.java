@@ -2,7 +2,6 @@ package dev.vansen.commandutils.command;
 
 import com.mojang.brigadier.context.CommandContext;
 import dev.vansen.commandutils.exceptions.CmdException;
-import dev.vansen.commandutils.legacy.LegacyColorsTranslator;
 import dev.vansen.commandutils.messages.MessageTypes;
 import dev.vansen.commandutils.messages.SendType;
 import dev.vansen.commandutils.sender.SenderTypes;
@@ -10,20 +9,21 @@ import io.papermc.paper.command.brigadier.CommandSourceStack;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.minimessage.MiniMessage;
-import org.bukkit.Bukkit;
-import org.bukkit.GameMode;
-import org.bukkit.OfflinePlayer;
-import org.bukkit.World;
+import org.bukkit.*;
 import org.bukkit.command.*;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.PlayerInventory;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -155,7 +155,7 @@ public record CommandWrapper(CommandContext<CommandSourceStack> context) {
     public void response(@Nullable String... messages) {
         Arrays.stream(messages)
                 .filter(Objects::nonNull)
-                .forEach(message -> sender().sendRichMessage(LegacyColorsTranslator.translate(message)));
+                .forEach(message -> sender().sendRichMessage(message));
     }
 
     /**
@@ -175,7 +175,7 @@ public record CommandWrapper(CommandContext<CommandSourceStack> context) {
      * @param messages the messages to send
      */
     public void response(@NotNull Iterable<String> messages) {
-        messages.forEach(message -> sender().sendRichMessage(LegacyColorsTranslator.translate(message)));
+        messages.forEach(message -> sender().sendRichMessage(message));
     }
 
     /**
@@ -196,7 +196,7 @@ public record CommandWrapper(CommandContext<CommandSourceStack> context) {
         if (!isPlayer()) return;
         Arrays.stream(messages)
                 .filter(Objects::nonNull)
-                .forEach(message -> sender().sendActionBar(MiniMessage.miniMessage().deserializeOrNull(LegacyColorsTranslator.translate(message))));
+                .forEach(message -> sender().sendActionBar(MiniMessage.miniMessage().deserializeOrNull(message)));
     }
 
     /**
@@ -218,7 +218,7 @@ public record CommandWrapper(CommandContext<CommandSourceStack> context) {
      */
     public void actionBar(@NotNull Iterable<String> messages) {
         if (!isPlayer()) return;
-        messages.forEach(message -> sender().sendActionBar(MiniMessage.miniMessage().deserializeOrNull(LegacyColorsTranslator.translate(message))));
+        messages.forEach(message -> sender().sendActionBar(MiniMessage.miniMessage().deserializeOrNull(message)));
     }
 
     /**
@@ -241,11 +241,11 @@ public record CommandWrapper(CommandContext<CommandSourceStack> context) {
         message.messages()
                 .forEach(m -> {
                     if (message.type() == SendType.BOTH) {
-                        sender().sendRichMessage(LegacyColorsTranslator.translate(m));
-                        sender().sendActionBar(MiniMessage.miniMessage().deserializeOrNull(LegacyColorsTranslator.translate(m)));
+                        sender().sendRichMessage(m);
+                        sender().sendActionBar(MiniMessage.miniMessage().deserializeOrNull(m));
                     } else if (message.type() == SendType.ACTION_BAR) {
-                        sender().sendActionBar(MiniMessage.miniMessage().deserializeOrNull(LegacyColorsTranslator.translate(m)));
-                    } else sender().sendRichMessage(LegacyColorsTranslator.translate(m));
+                        sender().sendActionBar(MiniMessage.miniMessage().deserializeOrNull(m));
+                    } else sender().sendRichMessage(m);
                 });
     }
 
@@ -657,6 +657,13 @@ public record CommandWrapper(CommandContext<CommandSourceStack> context) {
         return 0;
     }
 
+    /**
+     * Helper method to get the arguments between two indices.
+     *
+     * @param start The index of the first argument to include (0-based), 0 is being the command itself (i.e. /example).
+     * @param end   The index of the last argument to include (0-based), 0 is being the command itself (i.e. /example).
+     * @return A string containing the arguments between the two indices.
+     */
     public String argsBetween(int start, int end) {
         String[] args = input().split(" ");
         if (start < args.length && end < args.length) {
@@ -1447,6 +1454,32 @@ public record CommandWrapper(CommandContext<CommandSourceStack> context) {
     }
 
     /**
+     * Throws a {@link CmdException} with the given message if the given object is not null.
+     *
+     * @param obj     the object to check
+     * @param message the message to include in the exception
+     * @throws CmdException if the object is not null
+     */
+    public void throwIfNotNull(@Nullable Object obj, @NotNull String message) {
+        if (obj != null) {
+            throw new CmdException(message, sender());
+        }
+    }
+
+    /**
+     * Throws a {@link CmdException} with the given component message if the given object is not null.
+     *
+     * @param obj     the object to check
+     * @param message the component message to include in the exception
+     * @throws CmdException if the object is not null
+     */
+    public void throwIfNotNull(@Nullable Object obj, @NotNull Component message) {
+        if (obj != null) {
+            throw new CmdException(message, sender());
+        }
+    }
+
+    /**
      * Retrieves the entire input string of the command.
      *
      * @return the input string of the command.
@@ -1669,6 +1702,164 @@ public record CommandWrapper(CommandContext<CommandSourceStack> context) {
     }
 
     /**
+     * Runs the specified runnable after the specified task.
+     * Somewhat useful for people who like to have one line of code
+     *
+     * @param task     the task to run
+     * @param runnable the runnable to run after the task
+     */
+    public void runBothRunnable(@NotNull Runnable task, @NotNull Runnable runnable) {
+        task.run();
+        runnable.run();
+    }
+
+    /**
+     * Runs the specified task and then runs the specified function.
+     * Somewhat useful for people who like to have one line of code
+     *
+     * @param task     the task to run
+     * @param function the function to run after the task
+     * @return the result of the function
+     */
+    public <T> T runAndThenGet(@NotNull Runnable task, @NotNull Supplier<T> function) {
+        task.run();
+        return function.get();
+    }
+
+    /**
+     * Runs the specified task.
+     * Somewhat useful for people who like to have one line of code
+     *
+     * @param task the task to run
+     */
+    public void run(@NotNull Runnable task) {
+        task.run();
+    }
+
+    /**
+     * Runs the specified task asynchronously.
+     * Somewhat useful for people who like to have one line of code
+     *
+     * @param task the task to run
+     */
+    public void runAsync(@NotNull Runnable task) {
+        CompletableFuture.runAsync(task);
+    }
+
+    /**
+     * Runs the specified task asynchronously.
+     * Somewhat useful for people who like to have one line of code
+     *
+     * @param task     the task to run
+     * @param runnable the runnable to run after the task
+     */
+    public void runBothRunnableAsync(@NotNull Runnable task, @NotNull Runnable runnable) {
+        CompletableFuture.runAsync(() -> {
+            task.run();
+            runnable.run();
+        });
+    }
+
+    /**
+     * Runs the specified task asynchronously.
+     * Somewhat useful for people who like to have one line of code
+     *
+     * @param task     the task to run
+     * @param executor the executor to run the task on
+     */
+    public void runAsync(@NotNull Runnable task, @NotNull Executor executor) {
+        CompletableFuture.runAsync(task, executor);
+    }
+
+    /**
+     * Runs the specified task asynchronously.
+     * Somewhat useful for people who like to have one line of code
+     *
+     * @param task     the task to run
+     * @param runnable the runnable to run after the task
+     * @param executor the executor to run the task on
+     */
+    public void runBothRunnableAsync(@NotNull Runnable task, @NotNull Runnable runnable, @NotNull Executor executor) {
+        CompletableFuture.runAsync(() -> {
+            task.run();
+            runnable.run();
+        }, executor);
+    }
+
+    /**
+     * Runs the both of the runnable in different threads.
+     * Somewhat useful for people who like to have one line of code
+     *
+     * @param task     the task to run
+     * @param runnable the runnable to run after the task
+     * @param executor the executor to run the task on
+     */
+    public void runBothRunnableAsync(@NotNull Runnable task, @NotNull Runnable runnable, @NotNull Executor executor, @NotNull Executor executor2) {
+        CompletableFuture.runAsync(task, executor);
+        CompletableFuture.runAsync(runnable, executor2);
+    }
+
+    /**
+     * Runs the specified task asynchronously and waits for it to complete.
+     * Somewhat useful for people who like to have one line of code
+     *
+     * @param task the task to run
+     */
+    public void runAsyncJoin(@NotNull Runnable task) {
+        CompletableFuture.runAsync(task).join();
+    }
+
+    /**
+     * Runs the specified task asynchronously and waits for it to complete.
+     * Somewhat useful for people who like to have one line of code
+     *
+     * @param task     the task to run
+     * @param executor the executor to run the task on
+     */
+    public void runAsyncJoin(@NotNull Runnable task, @NotNull Executor executor) {
+        CompletableFuture.runAsync(task, executor).join();
+    }
+
+    /**
+     * Runs the both of the runnable in different threads and waits for them to complete.
+     * Somewhat useful for people who like to have one line of code
+     *
+     * @param task     the task to run
+     * @param runnable the runnable to run after the task
+     */
+    public void runBothRunnableAsyncJoin(@NotNull Runnable task, @NotNull Runnable runnable) {
+        CompletableFuture.runAsync(task).join();
+        CompletableFuture.runAsync(runnable).join();
+    }
+
+    /**
+     * Runs the both of the runnable in different threads and waits for them to complete.
+     * Somewhat useful for people who like to have one line of code
+     *
+     * @param task     the task to run
+     * @param runnable the runnable to run after the task
+     * @param executor the executor to run the task and runnable on
+     */
+    public void runBothRunnableAsyncJoin(@NotNull Runnable task, @NotNull Runnable runnable, @NotNull Executor executor) {
+        CompletableFuture.runAsync(task, executor).join();
+        CompletableFuture.runAsync(runnable, executor).join();
+    }
+
+    /**
+     * Runs the both of the runnable in different threads and waits for them to complete.
+     * Somewhat useful for people who like to have one line of code
+     *
+     * @param task      the task to run
+     * @param runnable  the runnable to run after the task
+     * @param executor  the executor to run the task on
+     * @param executor2 the executor to run the runnable on
+     */
+    public void runBothRunnableAsyncJoin(@NotNull Runnable task, @NotNull Runnable runnable, @NotNull Executor executor, @NotNull Executor executor2) {
+        CompletableFuture.runAsync(task, executor).join();
+        CompletableFuture.runAsync(runnable, executor2).join();
+    }
+
+    /**
      * Checks whether the command sender is of the specified types.
      *
      * @param types the types of sender to check
@@ -1677,6 +1868,156 @@ public record CommandWrapper(CommandContext<CommandSourceStack> context) {
     public boolean canExecute(@NotNull SenderTypes... types) {
         return Arrays.stream(types)
                 .anyMatch(type -> senderType() == type);
+    }
+
+    /**
+     * Retrieves the location of the player (if the sender is a player).
+     *
+     * @return the location of the player.
+     * @throws ClassCastException if the sender is not a player
+     */
+    public Location location() {
+        return player().getLocation();
+    }
+
+    /**
+     * Retrieves the world of the player (if the sender is a player).
+     *
+     * @return the world of the player.
+     * @throws ClassCastException if the sender is not a player
+     */
+    public World world() {
+        return player().getWorld();
+    }
+
+    /**
+     * Teleports the player (if the sender is a player).
+     * Not recommended, use {@link #teleportAsync(Location)} instead.
+     *
+     * @return if the teleportation was successful
+     * @throws ClassCastException if the sender is not a player
+     */
+    public boolean teleport(@NotNull Location location) {
+        return player().teleport(location);
+    }
+
+    /**
+     * Teleports the player asynchronously (if the sender is a player).
+     *
+     * @return if the teleportation was successful
+     * @throws ClassCastException if the sender is not a player
+     */
+    public CompletableFuture<Boolean> teleportAsync(@NotNull Location location) {
+        return player().teleportAsync(location);
+    }
+
+    /**
+     * Retrieves the name of the player (if the sender is a player).
+     *
+     * @return the name of the player
+     * @throws ClassCastException if the sender is not a player
+     */
+    public String name() {
+        return player().getName();
+    }
+
+    /**
+     * Retrieves the name of the player (if the sender is a player).
+     *
+     * @return the name of the player
+     * @throws ClassCastException if the sender is not a player
+     */
+    public String playerName() {
+        return name();
+    }
+
+    /**
+     * Retrieves the UUID of the player (if the sender is a player).
+     *
+     * @return the UUID of the player
+     * @throws ClassCastException if the sender is not a player
+     */
+    public UUID uuid() {
+        return player().getUniqueId();
+    }
+
+    /**
+     * Retrieves the UUID of the player (if the sender is a player).
+     *
+     * @return the UUID of the player
+     * @throws ClassCastException if the sender is not a player
+     */
+    public UUID playerUuid() {
+        return uuid();
+    }
+
+    /**
+     * Retrieves the inventory of the player (if the sender is a player).
+     *
+     * @return the inventory of the player
+     * @throws ClassCastException if the sender is not a player
+     */
+    public PlayerInventory inventory() {
+        return player().getInventory();
+    }
+
+    /**
+     * Adds an item to the player's inventory.
+     *
+     * @param item the item to add
+     */
+    public void add(@NotNull ItemStack item) {
+        player().getInventory().addItem(item);
+    }
+
+    /**
+     * Retrieves the game mode of the player (if the sender is a player).
+     *
+     * @return the game mode of the player
+     * @throws ClassCastException if the sender is not a player
+     */
+    public GameMode gameMode() {
+        return player().getGameMode();
+    }
+
+    /**
+     * Sets the game mode of the player (if the sender is a player).
+     *
+     * @param mode the game mode to set
+     * @throws ClassCastException if the sender is not a player
+     */
+    public void gameMode(@NotNull GameMode mode) {
+        player().setGameMode(mode);
+    }
+
+    /**
+     * Checks whether the player is flying (if the sender is a player).
+     *
+     * @return true if the player is flying, false otherwise
+     * @throws ClassCastException if the sender is not a player
+     */
+    public boolean flying() {
+        return player().isFlying();
+    }
+
+    /**
+     * Sets whether the player is flying (if the sender is a player).
+     *
+     * @param value the value to set
+     * @throws ClassCastException if the sender is not a player
+     */
+    public void flying(boolean value) {
+        player().setFlying(value);
+    }
+
+    /**
+     * Toggles the flying state of the player (if the sender is a player).
+     * Enables flying if the player is not flying, and disables flying if the player is flying.
+     *
+     * @throws ClassCastException if the sender is not a player
+     */
+    public void flyIfNot() {
+        flying(!flying());
     }
 
     /**

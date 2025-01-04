@@ -24,13 +24,13 @@ import java.util.List;
  */
 @SuppressWarnings("unused")
 public class SimpleCommandArgument {
+    private final Argument argument;
     private CommandExecutor defaultExecutor;
     private CommandExecutor playerExecutor;
     private CommandExecutor consoleExecutor;
     private CommandExecutor entityExecutor;
     private CommandExecutor blockExecutor;
     private CommandExecutor proxiedExecutor;
-    private final Argument argument;
     private CompletionHandler handler;
     private SenderTypes[] senderTypes;
     private CommandPermission permission;

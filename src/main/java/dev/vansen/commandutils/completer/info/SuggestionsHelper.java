@@ -38,11 +38,23 @@ public final class SuggestionsHelper {
 
     /**
      * Gets the last argument before the cursor.
+     * Returns an empty string if there is no previous argument.
      *
      * @return the last argument before the cursor
      */
     public @NotNull String previousArg() {
         if (inputWithoutCommand.lastIndexOf(" ") == -1) return "";
+        return inputWithoutCommand.substring(inputWithoutCommand.lastIndexOf(" ", inputWithoutCommand.lastIndexOf(" ") - 1) + 1, inputWithoutCommand.lastIndexOf(" "));
+    }
+
+    /**
+     * Gets the last argument before the cursor, or the specified default value if there is no previous argument.
+     *
+     * @param defaultValue the default value to return if there is no previous argument
+     * @return the last argument before the cursor, or the default value
+     */
+    public @NotNull String previousArgOr(@NotNull String defaultValue) {
+        if (inputWithoutCommand.lastIndexOf(" ") == -1) return defaultValue;
         return inputWithoutCommand.substring(inputWithoutCommand.lastIndexOf(" ", inputWithoutCommand.lastIndexOf(" ") - 1) + 1, inputWithoutCommand.lastIndexOf(" "));
     }
 
@@ -53,6 +65,27 @@ public final class SuggestionsHelper {
      */
     public @NotNull String currentArg() {
         if (inputWithoutCommand.lastIndexOf(" ") == -1) return inputWithoutCommand;
+        return inputWithoutCommand.substring(inputWithoutCommand.lastIndexOf(" ") + 1);
+    }
+
+    /**
+     * Gets the current argument being typed, or an empty string if there is no current argument (not typed yet).
+     *
+     * @return the current argument, or an empty string
+     */
+    public @NotNull String currentArgOr() {
+        if (inputWithoutCommand.lastIndexOf(" ") == -1) return "";
+        return inputWithoutCommand.substring(inputWithoutCommand.lastIndexOf(" ") + 1);
+    }
+
+    /**
+     * Gets the current argument being typed, or the specified default value if there is no current argument (not typed yet).
+     *
+     * @param defaultValue the default value
+     * @return the current argument, or the specified default value
+     */
+    public @NotNull String currentArgOr(@NotNull String defaultValue) {
+        if (inputWithoutCommand.lastIndexOf(" ") == -1) return defaultValue;
         return inputWithoutCommand.substring(inputWithoutCommand.lastIndexOf(" ") + 1);
     }
 

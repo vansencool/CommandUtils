@@ -35,7 +35,8 @@ public final class CommandInfo {
      */
     @NotNull
     @CanIgnoreReturnValue
-    public CommandInfo description(@NotNull String description) {
+    public CommandInfo description(@Nullable String description) {
+        if (description == null) return this;
         this.description = description;
         return this;
     }
@@ -48,7 +49,8 @@ public final class CommandInfo {
      */
     @NotNull
     @CanIgnoreReturnValue
-    public CommandInfo aliases(@NotNull String... aliases) {
+    public CommandInfo aliases(@Nullable String... aliases) {
+        if (aliases == null) return this;
         this.aliases = List.of(aliases);
         return this;
     }
@@ -61,7 +63,8 @@ public final class CommandInfo {
      */
     @NotNull
     @CanIgnoreReturnValue
-    public CommandInfo aliases(@NotNull List<String> aliases) {
+    public CommandInfo aliases(@Nullable List<String> aliases) {
+        if (aliases == null) return this;
         this.aliases = aliases;
         return this;
     }
@@ -74,7 +77,8 @@ public final class CommandInfo {
      */
     @NotNull
     @CanIgnoreReturnValue
-    public CommandInfo aliases(@NotNull Aliases aliases) {
+    public CommandInfo aliases(@Nullable Aliases aliases) {
+        if (aliases == null) return this;
         this.aliases = aliases.getAliases();
         return this;
     }
@@ -87,7 +91,8 @@ public final class CommandInfo {
      */
     @NotNull
     @CanIgnoreReturnValue
-    public CommandInfo permission(@NotNull CommandPermission permission) {
+    public CommandInfo permission(@Nullable CommandPermission permission) {
+        if (permission == null) return this;
         this.permission = permission;
         return this;
     }
@@ -100,7 +105,8 @@ public final class CommandInfo {
      */
     @NotNull
     @CanIgnoreReturnValue
-    public CommandInfo permission(@NotNull String permission) {
+    public CommandInfo permission(@Nullable String permission) {
+        if (permission == null) return this;
         this.permission = CommandPermission.permission(permission);
         return this;
     }

@@ -5,7 +5,6 @@ import com.mojang.brigadier.context.StringRange;
 import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import dev.vansen.commandutils.completer.info.SuggestionsHelper;
-import dev.vansen.commandutils.legacy.LegacyColorsTranslator;
 import io.papermc.paper.command.brigadier.MessageComponentSerializer;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
@@ -16,6 +15,7 @@ import java.util.Arrays;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.StreamSupport;
 
 /**
  * A wrapper class for {@link SuggestionsBuilder} to simplify and enhance the process of
@@ -23,17 +23,14 @@ import java.util.concurrent.CompletableFuture;
  * This class provides methods to add suggestions and build the completion results.
  */
 @SuppressWarnings({"unused", "UnstableApiUsage"})
-public final class SuggestionsBuilderWrapper {
-
-    private final @NotNull SuggestionsBuilder builder;
+public record SuggestionsBuilderWrapper(@NotNull SuggestionsBuilder builder) {
 
     /**
      * Constructs a new {@link SuggestionsBuilderWrapper} with the specified {@link SuggestionsBuilder}.
      *
      * @param builder the {@link SuggestionsBuilder} instance to wrap. This should not be null.
      */
-    public SuggestionsBuilderWrapper(@NotNull SuggestionsBuilder builder) {
-        this.builder = builder;
+    public SuggestionsBuilderWrapper {
     }
 
     /**
@@ -59,7 +56,7 @@ public final class SuggestionsBuilderWrapper {
     @NotNull
     @CanIgnoreReturnValue
     public SuggestionsBuilderWrapper suggest(@NotNull Map<String, String> suggestions) {
-        suggestions.forEach((suggestion, tooltip) -> builder.suggest(suggestion, MessageComponentSerializer.message().serializeOrNull(MiniMessage.miniMessage().deserializeOrNull(LegacyColorsTranslator.translate(tooltip)))));
+        suggestions.forEach((suggestion, tooltip) -> builder.suggest(suggestion, MessageComponentSerializer.message().serializeOrNull(MiniMessage.miniMessage().deserializeOrNull(tooltip))));
         return this;
     }
 
@@ -101,7 +98,7 @@ public final class SuggestionsBuilderWrapper {
     @NotNull
     @CanIgnoreReturnValue
     public SuggestionsBuilderWrapper suggest(@NotNull Iterable<Suggestion> suggestions, @NotNull String tooltip) {
-        suggestions.forEach(suggestion -> builder.suggest(suggestion.text(), MessageComponentSerializer.message().serializeOrNull(MiniMessage.miniMessage().deserializeOrNull(LegacyColorsTranslator.translate(tooltip)))));
+        suggestions.forEach(suggestion -> builder.suggest(suggestion.text(), MessageComponentSerializer.message().serializeOrNull(MiniMessage.miniMessage().deserializeOrNull(tooltip))));
         return this;
     }
 
@@ -129,7 +126,7 @@ public final class SuggestionsBuilderWrapper {
     @NotNull
     @CanIgnoreReturnValue
     public SuggestionsBuilderWrapper suggest(@NotNull String suggestion, @NotNull String tooltip) {
-        builder.suggest(suggestion, MessageComponentSerializer.message().serializeOrNull(MiniMessage.miniMessage().deserializeOrNull(LegacyColorsTranslator.translate(tooltip))));
+        builder.suggest(suggestion, MessageComponentSerializer.message().serializeOrNull(MiniMessage.miniMessage().deserializeOrNull(tooltip)));
         return this;
     }
 
@@ -200,8 +197,111 @@ public final class SuggestionsBuilderWrapper {
     @NotNull
     @CanIgnoreReturnValue
     public SuggestionsBuilderWrapper suggest(int value, @NotNull String tooltip) {
-        builder.suggest(value, MessageComponentSerializer.message().serializeOrNull(MiniMessage.miniMessage().deserializeOrNull(LegacyColorsTranslator.translate(tooltip))));
+        builder.suggest(value, MessageComponentSerializer.message().serializeOrNull(MiniMessage.miniMessage().deserializeOrNull(tooltip)));
         return this;
+    }
+
+    /**
+     * Adds list of suggestions to the list of completions if the current argument is equal to the specified value, or the current argument is empty.
+     *
+     * @param values the suggestions to be added.
+     * @return this instance for method chaining.
+     */
+    @NotNull
+    @CanIgnoreReturnValue
+    public SuggestionsBuilderWrapper suggestIfCurrentStartsWith(@NotNull Iterable<String> values) {
+        if (helper().currentArgOr().isEmpty()) {
+            values.forEach(builder::suggest);
+            return this;
+        }
+        StreamSupport.stream(values.spliterator(), true)
+                .filter(this::startsWithCurrent)
+                .forEach(builder::suggest);
+        return this;
+    }
+
+    /**
+     * Adds list of suggestions to the list of completions if the current argument is equal to the specified value, or the current argument is empty.
+     *
+     * @param values the suggestions to be added.
+     * @return this instance for method chaining.
+     */
+    @NotNull
+    @CanIgnoreReturnValue
+    public SuggestionsBuilderWrapper suggestIfCurrentStartsWith(@NotNull String... values) {
+        return suggestIfCurrentStartsWith(Arrays.asList(values));
+    }
+
+    /**
+     * Adds list of suggestions to the list of completions if the current argument is equal to the specified value, or the current argument is empty.
+     *
+     * @param values the suggestions to be added.
+     * @return this instance for method chaining.
+     */
+    @NotNull
+    @CanIgnoreReturnValue
+    public SuggestionsBuilderWrapper suggestIfCurrentStartsWith(@NotNull Iterable<String> values, @NotNull String tooltip) {
+        if (helper().currentArgOr().isEmpty()) {
+            values.forEach(builder::suggest);
+            return this;
+        }
+        StreamSupport.stream(values.spliterator(), true)
+                .filter(this::startsWithCurrent)
+                .forEach(suggestion -> suggest(suggestion, tooltip));
+        return this;
+    }
+
+    /**
+     * Checks if the specified value is the current argument or the current argument is empty.
+     *
+     * @param value the value to check
+     * @return true if the value is the current argument or the current argument is empty
+     */
+    public boolean isCurrent(@NotNull String value) {
+        return equalsOrEmpty(helper().currentArgOr(), value);
+    }
+
+    /**
+     * Checks if the specified value starts with the current argument or the current argument is empty.
+     *
+     * @param value the value to check
+     * @return true if the value starts with the current argument or the current argument is empty
+     */
+    public boolean startsWithCurrent(@NotNull String value) {
+        return startsWithOrEmpty(helper().currentArgOr(), value);
+    }
+
+    /**
+     * Checks if the specified value equals the check value or the value is empty.
+     *
+     * @param value the value to check
+     * @param check the check value
+     * @return true if the value equals the check value or the value is empty
+     */
+    public boolean equalsOrEmpty(@NotNull String value, @NotNull String check) {
+        return value.equals(check) || value.isEmpty();
+    }
+
+    /**
+     * Checks if the specified value starts with the check value or the value is empty.
+     *
+     * @param value the value to check
+     * @param check the check value
+     * @return true if the value starts with the check value or the value is empty
+     */
+    public boolean startsWithOrEmpty(@NotNull String value, @NotNull String check) {
+        return value.startsWith(check) || value.isEmpty();
+    }
+
+    /**
+     * Checks if the specified value starts with the check value and is not empty.
+     *
+     * @param value the value to check
+     * @param check the check value
+     * @return true if the value starts with the check value and is not empty
+     */
+    public boolean startsWithNotEmpty(@NotNull String value, @NotNull String check) {
+        return value.startsWith(check) && !value.isEmpty();
     }
 
     /**
@@ -299,6 +399,7 @@ public final class SuggestionsBuilderWrapper {
      *
      * @return the underlying {@link SuggestionsBuilder}
      */
+    @Override
     @NotNull
     public SuggestionsBuilder builder() {
         return builder;

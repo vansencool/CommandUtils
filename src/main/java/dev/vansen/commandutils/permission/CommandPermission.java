@@ -23,7 +23,7 @@ public final class CommandPermission {
      *
      * @param permission the permission string required to execute the command.
      */
-    public CommandPermission(@NotNull String permission) {
+    public CommandPermission(@Nullable String permission) {
         this.permission = permission;
         this.opLevel = -1;
     }
@@ -46,7 +46,7 @@ public final class CommandPermission {
      * @return a new {@link CommandPermission} instance with the specified permission string.
      */
     @NotNull
-    public static CommandPermission permission(@NotNull String permission) {
+    public static CommandPermission permission(@Nullable String permission) {
         return new CommandPermission(permission);
     }
 
