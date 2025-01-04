@@ -30,7 +30,6 @@ import java.util.concurrent.CompletableFuture;
 public final class PlayerArgumentType implements CustomArgumentType.Converted<Player, String> {
     private final @NotNull String tooltip;
     private final @Nullable TextColor color;
-    private @NotNull String excludeSelf = "";
     private boolean haveTooltip = true;
 
     /**
@@ -100,17 +99,6 @@ public final class PlayerArgumentType implements CustomArgumentType.Converted<Pl
     }
 
     /**
-     * Sets the name of the player to exclude from suggestions, and parse it from the command.
-     *
-     * @param name The name of the player to exclude.
-     * @return The current PlayerArgumentType instance.
-     */
-    public PlayerArgumentType excludeSelf(@NotNull String name) {
-        excludeSelf = name;
-        return this;
-    }
-
-    /**
      * Sets the suggestions to not have a tooltip.
      *
      * @return The current PlayerArgumentType instance.
@@ -132,10 +120,6 @@ public final class PlayerArgumentType implements CustomArgumentType.Converted<Pl
 
     @Override
     public @NotNull Player convert(@NotNull String nativeType) throws CommandSyntaxException {
-        if (nativeType.equals(excludeSelf)) {
-            throw new SimpleCommandExceptionType(MessageComponentSerializer.message().serialize(Component
-                    .text("You cannot select yourself!"))).create();
-        }
         if (nativeType.length() < 3) {
             throw new SimpleCommandExceptionType(MessageComponentSerializer.message().serialize(Component
                     .text("Too short player name! Enter a name within 3-16 characters"))).create();
@@ -166,14 +150,12 @@ public final class PlayerArgumentType implements CustomArgumentType.Converted<Pl
             if (!haveTooltip) {
                 Bukkit.getOnlinePlayers()
                         .parallelStream()
-                        .filter(player -> !player.getName().equals(excludeSelf))
                         .filter(player -> player.getName().startsWith(builder.getInput().substring(builder.getInput().lastIndexOf(" ") + 1)))
                         .forEach(player -> builder.suggest(player.getName()));
                 return builder.buildFuture();
             }
             Bukkit.getOnlinePlayers()
                     .parallelStream()
-                    .filter(player -> !player.getName().equals(excludeSelf))
                     .filter(player -> player.getName().startsWith(builder.getInput().substring(builder.getInput().lastIndexOf(" ") + 1)))
                     .forEach(player -> builder.suggest(player.getName(), MessageComponentSerializer.message()
                             .serialize(Component.text(tooltip.replaceAll("<player>", player.getName()))
@@ -192,7 +174,6 @@ public final class PlayerArgumentType implements CustomArgumentType.Converted<Pl
             }
             Bukkit.getOnlinePlayers()
                     .parallelStream()
-                    .filter(player -> !player.getName().equals(excludeSelf))
                     .forEach(player -> builder.suggest(player.getName(), MessageComponentSerializer.message()
                             .serialize(Component.text(tooltip.replaceAll("<player>", player.getName()))
                                     .color(color))));
