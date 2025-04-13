@@ -18,9 +18,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.stream.StreamSupport;
 
 /**
- * A wrapper class for {@link SuggestionsBuilder} to simplify and enhance the process of
- * building tab completion suggestions.
- * This class provides methods to add suggestions and build the completion results.
+ * A wrapper class for {@link SuggestionsBuilder} that provides additional functionality for building suggestions.
  */
 @SuppressWarnings({"unused", "UnstableApiUsage"})
 public record SuggestionsBuilderWrapper(@NotNull SuggestionsBuilder builder) {
@@ -202,124 +200,62 @@ public record SuggestionsBuilderWrapper(@NotNull SuggestionsBuilder builder) {
     }
 
     /**
-     * Adds list of suggestions to the list of completions if the current argument is equal to the specified value, or the current argument is empty.
+     * Adds list of suggestions to the list of completions if the value starts with current argument.
      *
      * @param values the suggestions to be added.
      * @return this instance for method chaining.
      */
     @NotNull
     @CanIgnoreReturnValue
-    public SuggestionsBuilderWrapper suggestIfCurrentStartsWith(@NotNull Iterable<String> values) {
-        if (helper().currentArgOr().isEmpty()) {
+    public SuggestionsBuilderWrapper suggestIfValueStartsWithCurrent(@NotNull Iterable<String> values) {
+        if (currentArg().isEmpty()) {
             values.forEach(builder::suggest);
             return this;
         }
-        StreamSupport.stream(values.spliterator(), true)
-                .filter(this::startsWithCurrent)
+        StreamSupport.stream(values.spliterator(), false)
+                .filter(value -> value.toLowerCase().startsWith(currentArgLowercase()))
                 .forEach(builder::suggest);
         return this;
     }
 
+
     /**
-     * Adds list of suggestions to the list of completions if the current argument is equal to the specified value, or the current argument is empty.
+     * Adds list of suggestions to the list of completions if the value starts with current argument.
      *
      * @param values the suggestions to be added.
      * @return this instance for method chaining.
      */
     @NotNull
     @CanIgnoreReturnValue
-    public SuggestionsBuilderWrapper suggestIfCurrentStartsWith(@NotNull String... values) {
-        return suggestIfCurrentStartsWith(Arrays.asList(values));
+    public SuggestionsBuilderWrapper suggestIfValueStartsWithCurrent(@NotNull String... values) {
+        return suggestIfValueStartsWithCurrent(Arrays.asList(values));
     }
 
     /**
-     * Adds list of suggestions to the list of completions if the current argument is equal to the specified value, or the current argument is empty.
+     * Returns the current argument that is being typed
      *
-     * @param values the suggestions to be added.
-     * @return this instance for method chaining.
+     * @return the current argument that is being typed
      */
-    @NotNull
-    @CanIgnoreReturnValue
-    public SuggestionsBuilderWrapper suggestIfCurrentStartsWith(@NotNull Iterable<String> values, @NotNull String tooltip) {
-        if (helper().currentArgOr().isEmpty()) {
-            values.forEach(builder::suggest);
-            return this;
-        }
-        StreamSupport.stream(values.spliterator(), true)
-                .filter(this::startsWithCurrent)
-                .forEach(suggestion -> suggest(suggestion, tooltip));
-        return this;
+    public String currentArg() {
+        return builder.getRemaining();
     }
 
     /**
-     * Checks if the specified value is the current argument or the current argument is empty.
+     * Returns the current argument that is being typed as lowercase.
      *
-     * @param value the value to check
-     * @return true if the value is the current argument or the current argument is empty
+     * @return the current argument that is being typed as lowercase
      */
-    public boolean isCurrent(@NotNull String value) {
-        return equalsOrEmpty(helper().currentArgOr(), value);
+    public String currentArgLowercase() {
+        return builder.getRemainingLowerCase();
     }
 
     /**
-     * Checks if the specified value starts with the current argument or the current argument is empty.
+     * Returns the starting.
      *
-     * @param value the value to check
-     * @return true if the value starts with the current argument or the current argument is empty
-     */
-    public boolean startsWithCurrent(@NotNull String value) {
-        return startsWithOrEmpty(helper().currentArgOr(), value);
-    }
-
-    /**
-     * Checks if the specified value equals the check value or the value is empty.
-     *
-     * @param value the value to check
-     * @param check the check value
-     * @return true if the value equals the check value or the value is empty
-     */
-    public boolean equalsOrEmpty(@NotNull String value, @NotNull String check) {
-        return value.equals(check) || value.isEmpty();
-    }
-
-    /**
-     * Checks if the specified value starts with the check value or the value is empty.
-     *
-     * @param value the value to check
-     * @param check the check value
-     * @return true if the value starts with the check value or the value is empty
-     */
-    public boolean startsWithOrEmpty(@NotNull String value, @NotNull String check) {
-        return value.startsWith(check) || value.isEmpty();
-    }
-
-    /**
-     * Checks if the specified value starts with the check value and is not empty.
-     *
-     * @param value the value to check
-     * @param check the check value
-     * @return true if the value starts with the check value and is not empty
-     */
-    public boolean startsWithNotEmpty(@NotNull String value, @NotNull String check) {
-        return value.startsWith(check) && !value.isEmpty();
-    }
-
-    /**
-     * Returns the starting position of the suggestions.
-     *
-     * @return the starting position of the suggestions
+     * @return the starting
      */
     public int start() {
         return builder.getStart();
-    }
-
-    /**
-     * Returns the remaining text.
-     *
-     * @return the remaining text
-     */
-    public String remaining() {
-        return builder.getRemaining();
     }
 
     /**
@@ -336,15 +272,16 @@ public record SuggestionsBuilderWrapper(@NotNull SuggestionsBuilder builder) {
      *
      * @return the suggestions helper
      */
+    @Deprecated
     public SuggestionsHelper helper() {
         return new SuggestionsHelper(this);
     }
 
     /**
-     * Returns a new {@link SuggestionsBuilderWrapper} with the specified starting position.
+     * Returns a new {@link SuggestionsBuilderWrapper} with the specified starting.
      *
-     * @param start the starting position
-     * @return a new {@link SuggestionsBuilderWrapper} with the specified starting position
+     * @param start the starting
+     * @return a new {@link SuggestionsBuilderWrapper} with the specified starting
      */
     @NotNull
     public SuggestionsBuilderWrapper offset(int start) {
@@ -395,7 +332,7 @@ public record SuggestionsBuilderWrapper(@NotNull SuggestionsBuilder builder) {
 
     /**
      * Returns the underlying {@link SuggestionsBuilder}.
-     * This would generally not be needed, but it is provided for convenience in-case you need to access the builder directly (likely for advanced usage).
+     * This would generally not be needed, but it is provided for convenience in-case you need to access the builder directly.
      *
      * @return the underlying {@link SuggestionsBuilder}
      */

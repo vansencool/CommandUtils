@@ -15,6 +15,7 @@ import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
+import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -395,6 +396,16 @@ public record CommandWrapper(CommandContext<CommandSourceStack> context) {
      * @return The value of the flag, or an empty string if the flag does not exist.
      */
     public String parameterForFlag(@NotNull String flag) {
+        return valueForFlag(flag);
+    }
+
+    /**
+     * Helper method to get the value of a flag, like "/example --flag some_value".
+     *
+     * @param flag The flag to get the value of.
+     * @return The value of the flag, or an empty string if the flag does not exist.
+     */
+    public String valueForFlag(@NotNull String flag) {
         String[] args = input().split(" ");
         for (int i = 0; i < args.length; i++) {
             if (args[i].equals(flag)) {
@@ -402,28 +413,6 @@ public record CommandWrapper(CommandContext<CommandSourceStack> context) {
             }
         }
         return "";
-    }
-
-    /**
-     * Helper method to check if multiple flags exist in the input.
-     *
-     * @param flags The flags to check.
-     * @return True if any of the flags exist, false otherwise.
-     */
-    public boolean hasFlags(@NotNull String... flags) {
-        return Arrays.stream(flags)
-                .anyMatch(this::hasFlag);
-    }
-
-    /**
-     * Helper method to check if multiple flags exist in the input.
-     *
-     * @param flags The flags to check.
-     * @return True if any of the flags exist, false otherwise.
-     */
-    public boolean hasFlags(@NotNull Collection<String> flags) {
-        return flags.stream()
-                .anyMatch(this::hasFlags);
     }
 
     /**
@@ -1067,7 +1056,9 @@ public record CommandWrapper(CommandContext<CommandSourceStack> context) {
      * Retrieves the sender type as a human-readable string.
      *
      * @return the sender type as a human-readable string.
+     * @deprecated Use {@link #friendlySender()} instead.
      */
+    @ApiStatus.Obsolete
     public String senderTypeString() {
         return switch (senderType()) {
             case PLAYER -> "Sent by a player";

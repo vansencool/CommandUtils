@@ -141,13 +141,13 @@ public final class ColorArgumentType implements CustomArgumentType.Converted<Tex
         try {
             if (!haveTooltip) {
                 ArgumentColors.COLOR_MAP.keySet()
-                        .parallelStream()
+                        .stream()
                         .filter(name -> name.startsWith(builder.getInput().substring(builder.getInput().lastIndexOf(" ") + 1)))
                         .forEach(builder::suggest);
                 return builder.buildFuture();
             }
             ArgumentColors.COLOR_MAP.keySet()
-                    .parallelStream()
+                    .stream()
                     .filter(name -> name.startsWith(builder.getInput().substring(builder.getInput().lastIndexOf(" ") + 1)))
                     .forEach(name -> builder.suggest(name, MessageComponentSerializer.message()
                             .serializeOrNull(MiniMessage.miniMessage().deserializeOrNull("<color:" + color.asHexString() + ">" + tooltip.replaceAll("<color>", name)))));
@@ -164,7 +164,6 @@ public final class ColorArgumentType implements CustomArgumentType.Converted<Tex
                 return Suggestions.empty();
             }
             ArgumentColors.COLOR_MAP.keySet()
-                    .parallelStream()
                     .forEach(name -> builder.suggest(name, MessageComponentSerializer.message()
                             .serializeOrNull(MiniMessage.miniMessage().deserializeOrNull("<color:" + color.asHexString() + ">" + tooltip.replaceAll("<color>", name)))));
             return builder.buildFuture();

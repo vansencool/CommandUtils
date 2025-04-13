@@ -122,13 +122,13 @@ public final class CommandUtils {
                     }
                     default -> {
                         switch (context.getSource().getExecutor()) {
-                            case Entity entity when entityExecutor != null -> {
-                                done = true;
-                                entityExecutor.execute(wrapped);
-                            }
                             case ProxiedCommandSender proxiedCommandSender when proxiedExecutor != null -> {
                                 done = true;
                                 proxiedExecutor.execute(wrapped);
+                            }
+                            case Entity entity when entityExecutor != null -> {
+                                done = true;
+                                entityExecutor.execute(wrapped);
                             }
                             case null, default -> {
                             }

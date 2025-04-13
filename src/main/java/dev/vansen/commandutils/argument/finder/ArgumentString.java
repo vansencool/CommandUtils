@@ -7,7 +7,6 @@ import dev.vansen.commandutils.argument.arguments.CommandBlockModeArgumentType;
 import dev.vansen.commandutils.argument.arguments.PlayerArgumentType;
 import dev.vansen.commandutils.exceptions.UnknownArgumentException;
 import io.papermc.paper.command.brigadier.argument.ArgumentTypes;
-import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
@@ -26,7 +25,7 @@ public class ArgumentString {
      * Supports: string, greedy, word, int, float, double, boolean, long, player, entity, blockpos, blockstate, color, commandblockmode, players, entities, namedcolor, world, gamemode, itemstack, uuid
      */
     @NotNull
-    public static List<String> types = ObjectArrayList.of(
+    public static List<String> types = List.of(
             "string",
             "greedy",
             "word",

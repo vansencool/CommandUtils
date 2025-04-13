@@ -8,7 +8,13 @@ import java.util.List;
 
 /**
  * A utility class for accessing argument details from a SuggestionsBuilderWrapper.
+ * <p>
+ * NOW DEPRECATED!
+ * This class does not work, however, it is only attained for the sole purpose of its previous args working!
+ * <p>
+ * Though however, previous arg require you to check if current arg (SuggestionsBuilderWrapper) is empty, if it is, then you need to do currentArg (this class) for the previous arg, or you can normally call previous arg
  */
+@Deprecated
 @SuppressWarnings("unused")
 public final class SuggestionsHelper {
     private final @NotNull String input;

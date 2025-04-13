@@ -149,13 +149,13 @@ public final class PlayerArgumentType implements CustomArgumentType.Converted<Pl
         try {
             if (!haveTooltip) {
                 Bukkit.getOnlinePlayers()
-                        .parallelStream()
+                        .stream()
                         .filter(player -> player.getName().startsWith(builder.getInput().substring(builder.getInput().lastIndexOf(" ") + 1)))
                         .forEach(player -> builder.suggest(player.getName()));
                 return builder.buildFuture();
             }
             Bukkit.getOnlinePlayers()
-                    .parallelStream()
+                    .stream()
                     .filter(player -> player.getName().startsWith(builder.getInput().substring(builder.getInput().lastIndexOf(" ") + 1)))
                     .forEach(player -> builder.suggest(player.getName(), MessageComponentSerializer.message()
                             .serialize(Component.text(tooltip.replaceAll("<player>", player.getName()))
@@ -173,7 +173,6 @@ public final class PlayerArgumentType implements CustomArgumentType.Converted<Pl
                 return Suggestions.empty();
             }
             Bukkit.getOnlinePlayers()
-                    .parallelStream()
                     .forEach(player -> builder.suggest(player.getName(), MessageComponentSerializer.message()
                             .serialize(Component.text(tooltip.replaceAll("<player>", player.getName()))
                                     .color(color))));

@@ -1,10 +1,10 @@
 package dev.vansen.commandutils.argument.finder;
 
 import dev.vansen.commandutils.command.CommandWrapper;
-import it.unimi.dsi.fastutil.objects.ObjectArrayList;
-import it.unimi.dsi.fastutil.objects.ObjectList;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -14,7 +14,7 @@ import java.util.concurrent.atomic.AtomicReference;
  */
 @SuppressWarnings({"unused", "unchecked"})
 public class ArgumentFinder<T> {
-    private static final ObjectArrayList<Class<?>> arguments = ObjectArrayList.of();
+    private static final ArrayList<Class<?>> arguments = new ArrayList<>();
     private final @NotNull AtomicReference<T> value = new AtomicReference<>();
     private final @NotNull CommandWrapper context;
     private final @NotNull String arg;
@@ -48,7 +48,7 @@ public class ArgumentFinder<T> {
      * @param types the class types to add
      */
     public static void addArgument(@NotNull Class<?>... types) {
-        arguments.addAll(ObjectList.of(types));
+        arguments.addAll(List.of(types));
     }
 
     /**

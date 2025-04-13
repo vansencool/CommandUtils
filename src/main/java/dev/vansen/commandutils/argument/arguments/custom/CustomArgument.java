@@ -2,7 +2,6 @@ package dev.vansen.commandutils.argument.arguments.custom;
 
 import com.mojang.brigadier.arguments.ArgumentType;
 import com.mojang.brigadier.context.CommandContext;
-import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import dev.vansen.commandutils.completer.SuggestionsBuilderWrapper;
@@ -13,11 +12,11 @@ import org.jetbrains.annotations.NotNull;
 import java.util.concurrent.CompletableFuture;
 
 /**
- * Class representing a argument, which is a custom argument type.
+ * Class representing an argument, which is a custom argument type.
  * This may be used to easily parse the value, or convert the native value to the target type.
  *
- * @param <T> the target type,
- * @param <N>
+ * @param <T> the target type (that it will be converted to, or parsed to)
+ * @param <N> the native type (the type that is used in the command)
  */
 @SuppressWarnings({"UnstableApiUsage", "unused"})
 public abstract class CustomArgument<T, N> implements CustomArgumentType.Converted<T, N> {
@@ -38,7 +37,7 @@ public abstract class CustomArgument<T, N> implements CustomArgumentType.Convert
     }
 
     @Override
-    public @NotNull T convert(@NotNull N nativeValue) throws CommandSyntaxException {
+    public @NotNull T convert(@NotNull N nativeValue) throws CmdSyntaxException {
         return parseOrConvert(nativeValue);
     }
 
@@ -50,7 +49,7 @@ public abstract class CustomArgument<T, N> implements CustomArgumentType.Convert
      * @return the parsed or converted value
      * @throws CmdSyntaxException if the native value is invalid to parse or convert
      */
-    public abstract @NotNull T parseOrConvert(@NotNull N nativeValue) throws CommandSyntaxException;
+    public abstract @NotNull T parseOrConvert(@NotNull N nativeValue) throws CmdSyntaxException;
 
     @Override
     public <S> @NotNull CompletableFuture<Suggestions> listSuggestions(@NotNull CommandContext<S> context, @NotNull SuggestionsBuilder builder) {

@@ -14,10 +14,7 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 /**
- * A utility class for registering Bukkit commands.
- *
- * @author [Your Name]
- * @since [Version]
+ * Class for registering the bukkit (not actual bukkit) commands.
  */
 @SuppressWarnings("unused")
 public class CommandManager {
@@ -93,7 +90,7 @@ public class CommandManager {
                 List<String> suggestions = completer.tabComplete(new BukkitArgument(context, info.args()), wrapper);
                 if (suggestions == null) return wrapper.build();
                 suggestions.stream()
-                        .filter(string -> string.toLowerCase().startsWith(wrapper.helper().currentArg().toLowerCase()))
+                        .filter(string -> string.toLowerCase().startsWith(wrapper.currentArgLowercase()))
                         .forEach(wrapper::suggest);
                 return wrapper.build();
             } else if (command instanceof AsyncTabCompleter completer) {
@@ -101,7 +98,7 @@ public class CommandManager {
                 if (suggestions == null) return wrapper.build();
                 return suggestions.thenComposeAsync(strings -> {
                     strings.stream()
-                            .filter(string -> string.toLowerCase().startsWith(wrapper.helper().currentArg().toLowerCase()))
+                            .filter(string -> string.toLowerCase().startsWith(wrapper.currentArgLowercase()))
                             .forEach(wrapper::suggest);
                     return wrapper.build();
                 });
