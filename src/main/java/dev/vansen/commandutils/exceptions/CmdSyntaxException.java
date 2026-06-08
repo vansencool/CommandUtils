@@ -26,4 +26,24 @@ public class CmdSyntaxException extends CommandSyntaxException {
     public CmdSyntaxException(@NotNull Component message) {
         super(new SimpleCommandExceptionType(MessageComponentSerializer.message().serializeOrNull(message)), MessageComponentSerializer.message().serializeOrNull(message));
     }
+
+    /**
+     * Creates a new syntax exception with the given message.
+     *
+     * @param message the message to include in the exception
+     * @return a new CmdSyntaxException with the given message
+     */
+    public static CmdSyntaxException of(@NotNull String message) {
+        return new CmdSyntaxException(message);
+    }
+
+    /**
+     * Creates a new syntax exception with the given message.
+     *
+     * @param message the message to include in the exception
+     * @return a new CmdSyntaxException with the given message
+     */
+    public static CmdSyntaxException of(@NotNull Component message) {
+        return new CmdSyntaxException(message);
+    }
 }

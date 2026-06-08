@@ -4,10 +4,13 @@ import com.mojang.brigadier.arguments.ArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
+import dev.vansen.commandutils.command.BasicCommandDetails;
 import dev.vansen.commandutils.completer.SuggestionsBuilderWrapper;
 import dev.vansen.commandutils.exceptions.CmdSyntaxException;
+import io.papermc.paper.command.brigadier.CommandSourceStack;
 import io.papermc.paper.command.brigadier.argument.CustomArgumentType;
 import org.jetbrains.annotations.NotNull;
+import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.CompletableFuture;
 
@@ -53,14 +56,19 @@ public abstract class CustomArgument<T, N> implements CustomArgumentType.Convert
 
     @Override
     public <S> @NotNull CompletableFuture<Suggestions> listSuggestions(@NotNull CommandContext<S> context, @NotNull SuggestionsBuilder builder) {
-        return suggest(new SuggestionsBuilderWrapper(builder));
+        if (!(context.getSource() instanceof CommandSourceStack stack)) {
+            LoggerFactory.getLogger("CommandUtils").error("The command source is not a CommandSourceStack. This should not have happened.");
+            return builder.buildFuture();
+        }
+        return suggest(new BasicCommandDetails(stack), new SuggestionsBuilderWrapper(builder));
     }
 
     /**
-     * Suggests possible values for the custom argument.
+     * Provides suggestions for the argument based on the command context and the suggestions builder.
      *
-     * @param wrapper the suggestions builder wrapper
-     * @return a {@link CompletableFuture} that will be completed with the {@link Suggestions} for tab completion.
+     * @param context the command context containing information about the command execution
+     * @param wrapper the suggestions builder wrapper to build suggestions
+     * @return a CompletableFuture that will complete with the generated suggestions
      */
-    public abstract @NotNull CompletableFuture<Suggestions> suggest(@NotNull SuggestionsBuilderWrapper wrapper);
+    public abstract @NotNull CompletableFuture<Suggestions> suggest(@NotNull BasicCommandDetails context, @NotNull SuggestionsBuilderWrapper wrapper);
 }

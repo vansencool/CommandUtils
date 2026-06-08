@@ -1,182 +1,216 @@
 package dev.vansen.commandutils.argument.arguments;
 
-import com.mojang.brigadier.arguments.ArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
-import com.mojang.brigadier.context.CommandContext;
-import com.mojang.brigadier.exceptions.CommandSyntaxException;
-import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
-import com.mojang.brigadier.suggestion.Suggestion;
 import com.mojang.brigadier.suggestion.Suggestions;
-import com.mojang.brigadier.suggestion.SuggestionsBuilder;
-import io.papermc.paper.command.brigadier.MessageComponentSerializer;
-import io.papermc.paper.command.brigadier.argument.CustomArgumentType;
+import dev.vansen.commandutils.argument.arguments.custom.CustomArgument;
+import dev.vansen.commandutils.command.BasicCommandDetails;
+import dev.vansen.commandutils.completer.Suggestion;
+import dev.vansen.commandutils.completer.SuggestionsBuilderWrapper;
+import dev.vansen.commandutils.exceptions.CmdSyntaxException;
+import dev.vansen.commandutils.permission.CommandPermission;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.TextColor;
-import net.kyori.adventure.text.logger.slf4j.ComponentLogger;
+import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.lang.reflect.Field;
-import java.util.List;
-import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Stream;
 
 /**
- * A custom argument type for parsing player names.
+ * A custom command argument that resolves an online {@link Player} by name.
+ *
+ * <p>
+ * This argument provides:
+ * </p>
+ *
+ * <ul>
+ *   <li>Strict validation of player names (3–16 characters)</li>
+ *   <li>Exact resolution of online players</li>
+ *   <li>Tab-completion using {@link SuggestionsBuilderWrapper}</li>
+ *   <li>Optional MiniMessage-based suggestion tooltips</li>
+ *   <li>Runtime filtering of suggestions using {@link CommandPermission}</li>
+ * </ul>
+ *
+ * <h2>Runtime requirement</h2>
+ *
+ * <p>
+ * A {@link CommandPermission} may be assigned as a <b>runtime requirement</b>
+ * using {@link #requirement(CommandPermission)}. When used in this context,
+ * the permission is evaluated during tab-completion to determine whether a
+ * suggested player should be visible to the command sender.
+ * </p>
+ *
+ * <p>
+ * Runtime requirements do <b>not</b> affect command execution.
+ * They are only used for suggestion visibility.
+ * </p>
  */
-@SuppressWarnings({"UnstableApiUsage", "unused", "unchecked", "ConstantConditions"})
-public final class PlayerArgumentType implements CustomArgumentType.Converted<Player, String> {
-    private final @NotNull String tooltip;
-    private final @Nullable TextColor color;
-    private boolean haveTooltip = true;
+@SuppressWarnings("unused")
+public final class PlayerArgumentType extends CustomArgument<Player, String> {
+
+    private static final MiniMessage MINI_MESSAGE = MiniMessage.miniMessage();
 
     /**
-     * Creates a new PlayerArgumentType with a custom tooltip and color.
-     *
-     * @param tooltip The tooltip to display when providing suggestions.
-     * @param color   The color of the tooltip.
+     * The MiniMessage tooltip used for suggestions.
      */
-    public PlayerArgumentType(@NotNull String tooltip, @Nullable TextColor color) {
+    private final @Nullable String tooltip;
+
+    /**
+     * Whether suggestion tooltips are enabled.
+     */
+    private boolean tooltipEnabled = true;
+
+    /**
+     * Runtime requirement used to filter visible suggestions.
+     */
+    private @NotNull CommandPermission requirement = CommandPermission.ALWAYS;
+
+    /**
+     * Creates a new {@link PlayerArgumentType} with a custom tooltip.
+     *
+     * @param tooltip the MiniMessage tooltip to use
+     */
+    public PlayerArgumentType(@Nullable String tooltip) {
+        super(StringArgumentType.string());
         this.tooltip = tooltip;
-        this.color = color;
     }
 
     /**
-     * Creates a new PlayerArgumentType with a custom tooltip and a default color.
+     * Creates a new {@link PlayerArgumentType} with the default tooltip.
      *
-     * @param tooltip The tooltip to display when providing suggestions.
-     */
-    public PlayerArgumentType(@NotNull String tooltip) {
-        this(tooltip, TextColor.color(166, 233, 255));
-    }
-
-    /**
-     * Creates a new PlayerArgumentType with default tooltip ("Click to choose <player>") and color (166, 233, 255).
+     * <p>
+     * Default tooltip:
+     * {@code <color:#a6e9ff>Click to choose <player></color>}
+     * </p>
      */
     public PlayerArgumentType() {
-        this("Click to choose <player>", TextColor.color(166, 233, 255));
+        this("<color:#a6e9ff>Click to choose <player></color>");
     }
 
     /**
-     * Returns a new PlayerArgumentType with a default tooltip and color.
+     * Creates a default {@link PlayerArgumentType}.
      *
-     * @return A new PlayerArgumentType instance.
+     * @return a new player argument type
      */
     public static @NotNull PlayerArgumentType player() {
         return new PlayerArgumentType();
     }
 
     /**
-     * Returns a new PlayerArgumentType with a custom tooltip.
+     * Creates a {@link PlayerArgumentType} with a custom tooltip.
      *
-     * @param tooltip The tooltip to display when providing suggestions.
-     * @return A new PlayerArgumentType instance.
+     * @param tooltip the MiniMessage tooltip
+     * @return a new player argument type
      */
     public static @NotNull PlayerArgumentType player(@NotNull String tooltip) {
         return new PlayerArgumentType(tooltip);
     }
 
     /**
-     * Returns a new PlayerArgumentType with a custom tooltip and color.
+     * Disables tooltips for suggestions.
      *
-     * @param tooltip The tooltip to display when providing suggestions.
-     * @param color   The color of the tooltip.
-     * @return A new PlayerArgumentType instance.
+     * @return this instance
      */
-    public static @NotNull PlayerArgumentType player(@NotNull String tooltip, @NotNull TextColor color) {
-        return new PlayerArgumentType(tooltip, color);
-    }
-
-    /**
-     * Returns whether the player argument type has a tooltip.
-     *
-     * @return True if the player argument type has a tooltip, false otherwise.
-     */
-    public boolean hasTooltip() {
-        return haveTooltip;
-    }
-
-    /**
-     * Sets the suggestions to not have a tooltip.
-     *
-     * @return The current PlayerArgumentType instance.
-     */
-    public PlayerArgumentType withoutTooltip() {
-        haveTooltip = false;
+    public @NotNull PlayerArgumentType withoutTooltip() {
+        this.tooltipEnabled = false;
         return this;
     }
 
     /**
-     * Sets the suggestions to have a tooltip.
+     * Enables tooltips for suggestions.
      *
-     * @return The current PlayerArgumentType instance.
+     * @return this instance
      */
-    public PlayerArgumentType withTooltip() {
-        haveTooltip = true;
+    public @NotNull PlayerArgumentType withTooltip() {
+        this.tooltipEnabled = true;
         return this;
     }
 
-    @Override
-    public @NotNull Player convert(@NotNull String nativeType) throws CommandSyntaxException {
-        if (nativeType.length() < 3) {
-            throw new SimpleCommandExceptionType(MessageComponentSerializer.message().serialize(Component
-                    .text("Too short player name! Enter a name within 3-16 characters"))).create();
-        }
-        if (nativeType.length() > 16) {
-            throw new SimpleCommandExceptionType(MessageComponentSerializer.message().serialize(Component
-                    .text("Too long player name! Enter a name within 3-16 characters"))).create();
-        }
-        if (Bukkit.getPlayerExact(nativeType) == null) {
-            throw new SimpleCommandExceptionType(MessageComponentSerializer.message().serialize(Component.text("Invalid player ")
-                    .append(Component.text(
-                            nativeType + "!"
-                    ))
-                    .color(TextColor.fromHexString("#ff576d")))).create();
-        }
-
-        return Objects.requireNonNull(Bukkit.getPlayerExact(nativeType));
+    /**
+     * Sets a runtime requirement that determines which players
+     * are visible during tab completion.
+     *
+     * <p>
+     * This reuses the {@link CommandPermission} system, even though the method is named "requirement".
+     *
+     * @param requirement the runtime requirement
+     * @return this instance
+     */
+    public @NotNull PlayerArgumentType requirement(
+            @NotNull CommandPermission requirement
+    ) {
+        this.requirement = requirement;
+        return this;
     }
 
+    /**
+     * Parses and validates the provided player name.
+     *
+     * @param nativeValue the raw argument input
+     * @return the resolved online player
+     * @throws CmdSyntaxException if the name is invalid or the player is not online
+     */
     @Override
-    public @NotNull ArgumentType<String> getNativeType() {
-        return StringArgumentType.string();
+    public @NotNull Player parseOrConvert(
+            @NotNull String nativeValue
+    ) throws CmdSyntaxException {
+
+        int length = nativeValue.length();
+        if (length < 3 || length > 16) {
+            throw CmdSyntaxException.of(
+                    Component.text(
+                            "Player names must be between 3 and 16 characters."
+                    )
+            );
+        }
+
+        Player player = Bukkit.getPlayerExact(nativeValue);
+        if (player == null) {
+            throw CmdSyntaxException.of(
+                    MINI_MESSAGE.deserialize(
+                            "<color:#ff576d>Invalid player <player></color>"
+                                    .replace("<player>", nativeValue)
+                    )
+            );
+        }
+
+        return player;
     }
 
+    /**
+     * Provides tab-completion suggestions for online players.
+     *
+     * @param context the command context details
+     * @param wrapper the suggestions builder wrapper
+     * @return a future containing the suggestions
+     */
     @Override
-    public <S> @NotNull CompletableFuture<Suggestions> listSuggestions(@NotNull CommandContext<S> context, @NotNull SuggestionsBuilder builder) {
-        try {
-            if (!haveTooltip) {
-                Bukkit.getOnlinePlayers()
-                        .stream()
-                        .filter(player -> player.getName().startsWith(builder.getInput().substring(builder.getInput().lastIndexOf(" ") + 1)))
-                        .forEach(player -> builder.suggest(player.getName()));
-                return builder.buildFuture();
-            }
-            Bukkit.getOnlinePlayers()
-                    .stream()
-                    .filter(player -> player.getName().startsWith(builder.getInput().substring(builder.getInput().lastIndexOf(" ") + 1)))
-                    .forEach(player -> builder.suggest(player.getName(), MessageComponentSerializer.message()
-                            .serialize(Component.text(tooltip.replaceAll("<player>", player.getName()))
-                                    .color(color))));
-            return builder.buildFuture();
-        } catch (@NotNull Exception e) {
-            try {
-                Field resultField = builder.getClass().getDeclaredField("result");
-                resultField.setAccessible(true);
-                List<Suggestion> result = (List<Suggestion>) resultField.get(builder);
-                result.clear();
-            } catch (Exception ex) {
-                ComponentLogger.logger("CommandUtils")
-                        .error("Failed to clear suggestions", e);
-                return Suggestions.empty();
-            }
-            Bukkit.getOnlinePlayers()
-                    .forEach(player -> builder.suggest(player.getName(), MessageComponentSerializer.message()
-                            .serialize(Component.text(tooltip.replaceAll("<player>", player.getName()))
-                                    .color(color))));
-            return builder.buildFuture();
-        }
+    public @NotNull CompletableFuture<Suggestions> suggest(
+            @NotNull BasicCommandDetails context,
+            @NotNull SuggestionsBuilderWrapper wrapper
+    ) {
+        Stream<Suggestion> suggestions = Bukkit.getOnlinePlayers()
+                .stream()
+                .filter(player ->
+                        requirement.allows(context)
+                )
+                .map(Player::getName)
+                .map(name -> {
+                    if (!tooltipEnabled || tooltip == null) {
+                        return new Suggestion(name);
+                    }
+
+                    return new Suggestion(
+                            name,
+                            MINI_MESSAGE.deserialize(
+                                    tooltip.replace("<player>", name)
+                            )
+                    );
+                });
+
+        wrapper.suggestSuggestionIfValueStartsWithCurrent(suggestions);
+        return wrapper.builder().buildFuture();
     }
 }

@@ -1,13 +1,14 @@
-package dev.vansen.commandutils.argument;
+package dev.vansen.commandutils.expansion.simple;
 
 import com.mojang.brigadier.arguments.ArgumentType;
+import dev.vansen.commandutils.argument.Argument;
+import dev.vansen.commandutils.argument.CommandArgument;
 import dev.vansen.commandutils.command.CommandExecutor;
 import dev.vansen.commandutils.command.ExecutableSender;
 import dev.vansen.commandutils.command.Position;
 import dev.vansen.commandutils.completer.CompletionHandler;
 import dev.vansen.commandutils.permission.CommandPermission;
 import dev.vansen.commandutils.sender.SenderTypes;
-import dev.vansen.commandutils.subcommand.AbstractSubCommand;
 import dev.vansen.commandutils.subcommand.SubCommand;
 import org.bukkit.command.BlockCommandSender;
 import org.bukkit.command.ConsoleCommandSender;
@@ -35,12 +36,8 @@ public class SimpleCommandArgument {
     private SenderTypes[] senderTypes;
     private CommandPermission permission;
     private Position argumentPosition = Position.LAST;
-    private Position abstractArgumentPosition = Position.LAST;
-    private Position abstractSubCommandPosition = Position.LAST;
     private List<CommandArgument> arguments;
-    private List<AbstractCommandArgument> abstractArguments;
     private List<SubCommand> subCommands;
-    private List<AbstractSubCommand> abstractSubCommands;
 
     /**
      * Constructs a new SimpleCommandArgument with the specified argument.
@@ -207,30 +204,6 @@ public class SimpleCommandArgument {
     }
 
     /**
-     * Sets the abstract argument position in the command.
-     *
-     * @param position the position of the abstract argument.
-     * @return the current {@link SimpleCommandArgument} instance for chaining.
-     */
-    @ApiStatus.NonExtendable
-    public SimpleCommandArgument abstractArgumentPosition(Position position) {
-        this.abstractArgumentPosition = position;
-        return this;
-    }
-
-    /**
-     * Sets the abstract subcommand position in the command.
-     *
-     * @param position the position of the abstract subcommand.
-     * @return the current {@link SimpleCommandArgument} instance for chaining.
-     */
-    @ApiStatus.NonExtendable
-    public SimpleCommandArgument abstractSubCommandPosition(Position position) {
-        this.abstractSubCommandPosition = position;
-        return this;
-    }
-
-    /**
      * Sets the completion handler for this argument.
      *
      * @param handler the {@link CompletionHandler} for this argument.
@@ -255,18 +228,6 @@ public class SimpleCommandArgument {
     }
 
     /**
-     * Sets the abstract subcommands for this argument.
-     *
-     * @param abstractSubCommands the list of {@link AbstractSubCommand} for this argument.
-     * @return the current {@link SimpleCommandArgument} instance for chaining.
-     */
-    @ApiStatus.NonExtendable
-    public SimpleCommandArgument abstractSubCommands(@NotNull List<AbstractSubCommand> abstractSubCommands) {
-        this.abstractSubCommands = abstractSubCommands;
-        return this;
-    }
-
-    /**
      * Sets the arguments for this argument.
      *
      * @param arguments the list of {@link CommandArgument} for this argument.
@@ -275,18 +236,6 @@ public class SimpleCommandArgument {
     @ApiStatus.NonExtendable
     public SimpleCommandArgument arguments(@NotNull List<CommandArgument> arguments) {
         this.arguments = arguments;
-        return this;
-    }
-
-    /**
-     * Sets the abstract arguments for this argument.
-     *
-     * @param abstractArguments the list of {@link AbstractCommandArgument} for this argument.
-     * @return the current {@link SimpleCommandArgument} instance for chaining.
-     */
-    @ApiStatus.NonExtendable
-    public SimpleCommandArgument abstractArguments(@NotNull List<AbstractCommandArgument> abstractArguments) {
-        this.abstractArguments = abstractArguments;
         return this;
     }
 
@@ -312,35 +261,11 @@ public class SimpleCommandArgument {
         if (permission != null) arg.permission(permission);
 
         if (argumentPosition == Position.LAST) {
-            if (abstractSubCommandPosition == Position.LAST) {
-                if (subCommands != null) subCommands.forEach(arg::subCommand);
-                if (abstractSubCommands != null) abstractSubCommands.forEach(arg::subCommand);
-            } else {
-                if (abstractSubCommands != null) abstractSubCommands.forEach(arg::subCommand);
-                if (subCommands != null) subCommands.forEach(arg::subCommand);
-            }
-            if (abstractArgumentPosition == Position.LAST) {
-                if (arguments != null) arguments.forEach(arg::argument);
-                if (abstractArguments != null) abstractArguments.forEach(arg::argument);
-            } else {
-                if (abstractArguments != null) abstractArguments.forEach(arg::argument);
-                if (arguments != null) arguments.forEach(arg::argument);
-            }
+            if (subCommands != null) subCommands.forEach(arg::subCommand);
+            if (arguments != null) arguments.forEach(arg::argument);
         } else {
-            if (abstractArgumentPosition == Position.LAST) {
-                if (arguments != null) arguments.forEach(arg::argument);
-                if (abstractArguments != null) abstractArguments.forEach(arg::argument);
-            } else {
-                if (abstractArguments != null) abstractArguments.forEach(arg::argument);
-                if (arguments != null) arguments.forEach(arg::argument);
-            }
-            if (abstractSubCommandPosition == Position.LAST) {
-                if (subCommands != null) subCommands.forEach(arg::subCommand);
-                if (abstractSubCommands != null) abstractSubCommands.forEach(arg::subCommand);
-            } else {
-                if (abstractSubCommands != null) abstractSubCommands.forEach(arg::subCommand);
-                if (subCommands != null) subCommands.forEach(arg::subCommand);
-            }
+            if (arguments != null) arguments.forEach(arg::argument);
+            if (subCommands != null) subCommands.forEach(arg::subCommand);
         }
 
         return arg;

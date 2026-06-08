@@ -8,5 +8,9 @@
  * By creating a new, modern command system that is built on top of CommandUtils, we can take advantage of design principles to create a more robust, flexible, and maintainable API.
  * <p>
  * This allows us to provide a better developer experience and more efficient command processing, while still maintaining a familiar and intuitive API for users who are already familiar with the Bukkit command system.
+ *
+ * <p>
+ * This package is experimental and has not been fully tested.
+ * </p>
  */
-package dev.vansen.commandutils.bukkit;
+package dev.vansen.commandutils.expansion.bukkit;

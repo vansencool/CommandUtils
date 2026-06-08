@@ -5,7 +5,6 @@ import dev.vansen.commandutils.exceptions.CmdException;
 import dev.vansen.commandutils.messages.MessageTypes;
 import org.bukkit.command.BlockCommandSender;
 import org.bukkit.command.ConsoleCommandSender;
-import org.bukkit.command.ProxiedCommandSender;
 import org.bukkit.command.RemoteConsoleCommandSender;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
@@ -102,25 +101,6 @@ public enum SenderTypes {
         @Override
         public void check(CommandWrapper context, String message) {
             if (!context.isBlock()) {
-                throw new CmdException(message, context.sender());
-            }
-        }
-    },
-
-    /**
-     * Represents a proxied sender {@link ProxiedCommandSender}.
-     */
-    PROXIED {
-        @Override
-        public void check(CommandWrapper context) {
-            if (!context.isProxied()) {
-                throw new CmdException(MessageTypes.PROXIED_SENDER_EXCEPTION, context.sender());
-            }
-        }
-
-        @Override
-        public void check(CommandWrapper context, String message) {
-            if (!context.isProxied()) {
                 throw new CmdException(message, context.sender());
             }
         }

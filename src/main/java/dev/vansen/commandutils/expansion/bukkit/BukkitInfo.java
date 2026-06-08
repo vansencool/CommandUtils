@@ -1,4 +1,4 @@
-package dev.vansen.commandutils.bukkit;
+package dev.vansen.commandutils.expansion.bukkit;
 
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import org.jetbrains.annotations.NotNull;

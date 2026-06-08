@@ -1,6 +1,12 @@
 package dev.vansen.commandutils.argument.finder;
 
-import com.mojang.brigadier.arguments.*;
+import com.mojang.brigadier.arguments.ArgumentType;
+import com.mojang.brigadier.arguments.BoolArgumentType;
+import com.mojang.brigadier.arguments.DoubleArgumentType;
+import com.mojang.brigadier.arguments.FloatArgumentType;
+import com.mojang.brigadier.arguments.IntegerArgumentType;
+import com.mojang.brigadier.arguments.LongArgumentType;
+import com.mojang.brigadier.arguments.StringArgumentType;
 import dev.vansen.commandutils.argument.CommandArgument;
 import dev.vansen.commandutils.argument.arguments.ColorArgumentType;
 import dev.vansen.commandutils.argument.arguments.CommandBlockModeArgumentType;
@@ -8,80 +14,99 @@ import dev.vansen.commandutils.argument.arguments.PlayerArgumentType;
 import dev.vansen.commandutils.exceptions.UnknownArgumentException;
 import io.papermc.paper.command.brigadier.argument.ArgumentTypes;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
-import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * A utility class for finding arguments from strings ({@link #fromString(String)})
+ * A utility class for resolving argument types from string identifiers.
+ *
  * <p>
- * Note, this checks for specific types of arguments, it is generally recommended to use {@link CommandArgument#of(String, ArgumentType)} if you want to use other types of arguments.
+ * This utility supports a predefined set of commonly used argument types and allows
+ * registering or unregistering custom argument types at runtime.
+ * </p>
+ *
+ * <p>
+ * For custom or unsupported argument types, {@link CommandArgument#of(String, ArgumentType)}
+ * may also be used directly.
+ * </p>
  */
-@SuppressWarnings("UnstableApiUsage")
-public class ArgumentString {
+@SuppressWarnings({"UnstableApiUsage", "unused"})
+public final class ArgumentString {
 
     /**
-     * A list of all argument types that can be parsed.
-     * <p>
-     * Supports: string, greedy, word, int, float, double, boolean, long, player, entity, blockpos, blockstate, color, commandblockmode, players, entities, namedcolor, world, gamemode, itemstack, uuid
+     * Registry of argument identifiers to their corresponding argument types.
      */
     @NotNull
-    public static List<String> types = List.of(
-            "string",
-            "greedy",
-            "word",
-            "int",
-            "float",
-            "double",
-            "boolean",
-            "long",
-            "player",
-            "entity",
-            "blockpos",
-            "blockstate",
-            "color",
-            "commandblockmode",
-            "players",
-            "entities",
-            "namedcolor",
-            "world",
-            "gamemode",
-            "itemstack",
-            "uuid"
-    );
+    private static final Map<String, ArgumentType<?>> TYPES = new ConcurrentHashMap<>();
+
+    static {
+        TYPES.put("string", StringArgumentType.string());
+        TYPES.put("greedy", StringArgumentType.greedyString());
+        TYPES.put("word", StringArgumentType.word());
+        TYPES.put("int", IntegerArgumentType.integer());
+        TYPES.put("float", FloatArgumentType.floatArg());
+        TYPES.put("double", DoubleArgumentType.doubleArg());
+        TYPES.put("boolean", BoolArgumentType.bool());
+        TYPES.put("long", LongArgumentType.longArg());
+        TYPES.put("player", PlayerArgumentType.player());
+        TYPES.put("entity", ArgumentTypes.entity());
+        TYPES.put("blockpos", ArgumentTypes.blockPosition());
+        TYPES.put("blockstate", ArgumentTypes.blockState());
+        TYPES.put("color", ColorArgumentType.color());
+        TYPES.put("commandblockmode", CommandBlockModeArgumentType.mode());
+        TYPES.put("players", ArgumentTypes.players());
+        TYPES.put("entities", ArgumentTypes.entities());
+        TYPES.put("namedcolor", ArgumentTypes.namedColor());
+        TYPES.put("world", ArgumentTypes.world());
+        TYPES.put("gamemode", ArgumentTypes.gameMode());
+        TYPES.put("itemstack", ArgumentTypes.itemStack());
+        TYPES.put("uuid", ArgumentTypes.uuid());
+    }
 
     /**
-     * Gets an argument type from a string.
-     * View more details at {@link #types}
+     * Resolves an argument type from its string identifier.
      *
-     * @param string the string to get the argument type from
-     * @return the argument type
-     * @throws UnknownArgumentException if the string is not a valid argument type
+     * @param string the identifier to resolve
+     * @return the corresponding argument type
+     * @throws UnknownArgumentException if the identifier is not registered
      */
     @NotNull
     public static ArgumentType<?> fromString(@NotNull String string) {
-        return switch (string.toLowerCase()) {
-            case "string" -> StringArgumentType.string();
-            case "greedy" -> StringArgumentType.greedyString();
-            case "word" -> StringArgumentType.word();
-            case "int" -> IntegerArgumentType.integer();
-            case "float" -> FloatArgumentType.floatArg();
-            case "double" -> DoubleArgumentType.doubleArg();
-            case "boolean" -> BoolArgumentType.bool();
-            case "long" -> LongArgumentType.longArg();
-            case "player" -> PlayerArgumentType.player();
-            case "entity" -> ArgumentTypes.entity();
-            case "blockpos" -> ArgumentTypes.blockPosition();
-            case "blockstate" -> ArgumentTypes.blockState();
-            case "color" -> ColorArgumentType.color();
-            case "commandblockmode" -> CommandBlockModeArgumentType.mode();
-            case "players" -> ArgumentTypes.players();
-            case "entities" -> ArgumentTypes.entities();
-            case "namedcolor" -> ArgumentTypes.namedColor();
-            case "world" -> ArgumentTypes.world();
-            case "gamemode" -> ArgumentTypes.gameMode();
-            case "itemstack" -> ArgumentTypes.itemStack();
-            case "uuid" -> ArgumentTypes.uuid();
-            default -> throw new UnknownArgumentException(string, types);
-        };
+        ArgumentType<?> type = TYPES.get(string.toLowerCase());
+        if (type == null) {
+            throw new UnknownArgumentException(string, TYPES.keySet());
+        }
+        return type;
+    }
+
+    /**
+     * Registers a new argument type.
+     *
+     * @param name the identifier to register
+     * @param type the argument type
+     * @throws IllegalStateException if the identifier is already registered
+     */
+    public static void register(@NotNull String name, @NotNull ArgumentType<?> type) {
+        String key = name.toLowerCase();
+        if (TYPES.putIfAbsent(key, type) != null) {
+            throw new IllegalStateException("Argument type already registered: " + key);
+        }
+    }
+
+    /**
+     * Unregisters an argument type.
+     *
+     * @param name the identifier to unregister
+     * @return the removed argument type, or {@code null} if none was registered
+     */
+    @Nullable
+    public static ArgumentType<?> unregister(@NotNull String name) {
+        return TYPES.remove(name.toLowerCase());
+    }
+
+    private ArgumentString() {
+        throw new UnsupportedOperationException();
     }
 }

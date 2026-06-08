@@ -1,91 +1,185 @@
 package dev.vansen.commandutils.permission;
 
+import dev.vansen.commandutils.command.BasicCommandDetails;
+import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.function.Predicate;
+
 /**
- * Represents a command permission that can either be a specific permission string or an operator (OP) level.
- * Command permissions determine what actions a user can perform based on their permissions or OP level.
+ * Represents a permission or requirement that determines whether
+ * a command may be executed in a given context.
+ *
+ * <p>Permissions are composable and may be combined using logical
+ * operations such as AND and OR.
+ *
+ * <p><b>Permission inheritance:</b><br>
+ * Permissions apply to children as well. If a permission is set on
+ * a command, subcommand, or argument, it will also apply to all of
+ * its children (including subcommands, arguments, and executors).
  */
 @SuppressWarnings("unused")
 public final class CommandPermission {
 
     /**
-     * A predefined {@link CommandPermission} representing operator (OP) permissions.
+     * A permission that only allows player senders, alternative to using playerExecute or checking manually.
      */
-    public static final CommandPermission OP = new CommandPermission(2);
-    private final @Nullable String permission;
-    private final int opLevel;
+    public static final CommandPermission PLAYER_ONLY = single(req -> req.sender() instanceof Player);
 
     /**
-     * Constructs a {@link CommandPermission} with a specific permission string.
-     * This type of permission is typically used for more granular control over command access.
-     *
-     * @param permission the permission string required to execute the command.
+     * A permission that only allows non-player (console) senders, alternative to using consoleExecute or checking manually.
      */
-    public CommandPermission(@Nullable String permission) {
-        this.permission = permission;
-        this.opLevel = -1;
+    public static final CommandPermission CONSOLE_ONLY = single(req -> !(req.sender() instanceof Player));
+
+    /**
+     * A permission that only allows operator (OP) senders.
+     */
+    public static final CommandPermission OP = single(req -> req.sender().isOp());
+
+    /**
+     * A permission that always allows execution.
+     */
+    public static final CommandPermission ALWAYS = single(req -> true);
+
+    /**
+     * A permission that never allows execution.
+     */
+    public static final CommandPermission NEVER = single(req -> false);
+
+    private final Predicate<BasicCommandDetails> test;
+
+    /**
+     * Creates a new {@link CommandPermission} backed by the given predicate.
+     *
+     * @param test a predicate that evaluates the command requirement
+     */
+    private CommandPermission(@NotNull Predicate<BasicCommandDetails> test) {
+        this.test = test;
     }
 
     /**
-     * Constructs a {@link CommandPermission} with a specific operator (OP) level.
-     * This type of permission is used to represent commands that are only accessible by users with a certain OP level.
+     * Evaluates whether this permission allows execution
+     * in the given command context.
      *
-     * @param opLevel the OP level required to execute the command.
+     * @param requirement the command requirement context
+     * @return {@code true} if execution is allowed
      */
-    public CommandPermission(int opLevel) {
-        this.permission = null;
-        this.opLevel = opLevel;
+    public boolean allows(@NotNull BasicCommandDetails requirement) {
+        return test.test(requirement);
     }
 
     /**
-     * Factory method to create a {@link CommandPermission} based on a permission string.
+     * Creates a permission that checks for a specific permission string.
      *
-     * @param permission the permission string required to execute the command.
-     * @return a new {@link CommandPermission} instance with the specified permission string.
+     * @param permission the permission to check, if it is null it will return {@link #ALWAYS}
+     * @return a permission-based {@link CommandPermission}
      */
     @NotNull
     public static CommandPermission permission(@Nullable String permission) {
-        return new CommandPermission(permission);
+        if (permission == null) return ALWAYS;
+        return new CommandPermission(req -> req.hasPermission(permission));
     }
 
     /**
-     * Factory method to create a {@link CommandPermission} based on an operator (OP) level.
+     * Creates a permission that checks if the sender is in a specific world.
+     * <p>
+     * For this to work properly, it assumes the commands refresh everytime a player changes world. This can be done by listening to the PlayerChangedWorldEvent and refreshing the command for the player.
      *
-     * @param opLevel the OP level required to execute the command.
-     * @return a new {@link CommandPermission} instance with the specified operator (OP) level.
+     * @param worldName the name of the world to check
+     * @return a world-based {@link CommandPermission}
      */
     @NotNull
-    public static CommandPermission op(int opLevel) {
-        return new CommandPermission(opLevel);
+    public static CommandPermission world(@NotNull String worldName) {
+        return new CommandPermission(req -> {
+            if (req.isPlayer()) {
+                return req.player().getWorld().getName().equalsIgnoreCase(worldName);
+            } else {
+                return false;
+            }
+        });
     }
 
     /**
-     * Gets the permission string associated with this {@link CommandPermission}.
+     * Creates a permission that checks if the sender is in any of the specified worlds.
+     * <p>
+     * For this to work properly, it assumes the commands refresh everytime a player changes world. This can be done by listening to the PlayerChangedWorldEvent and refreshing the command for the player.
      *
-     * @return the permission string, or {@code null} if this permission is based on OP level.
+     * @param worldNames the names of the worlds to check
+     * @return a world-based {@link CommandPermission}
      */
-    @Nullable
-    public String getPermission() {
-        return permission;
+    @NotNull
+    public static CommandPermission world(@NotNull String... worldNames) {
+        return new CommandPermission(req -> {
+            if (req.isPlayer()) {
+                String playerWorld = req.player().getWorld().getName();
+                for (String worldName : worldNames) {
+                    if (playerWorld.equalsIgnoreCase(worldName)) {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        });
     }
 
     /**
-     * Gets the OP level associated with this {@link CommandPermission}.
+     * Creates a permission that negates another permission.
      *
-     * @return the OP level, or -1 if this permission is based on a permission string.
+     * @param permission the permission to negate
+     * @return a negated {@link CommandPermission}
      */
-    public int getOpLevel() {
-        return opLevel;
+    @NotNull
+    public static CommandPermission not(@NotNull CommandPermission permission) {
+        return new CommandPermission(req -> !permission.allows(req));
     }
 
     /**
-     * Determines if this {@link CommandPermission} is an OP-level permission.
+     * Creates a permission that allows execution only if
+     * all provided permissions allow it.
      *
-     * @return {@code true} if the permission is based on OP level; {@code false} otherwise.
+     * @param permissions the permissions to combine
+     * @return a combined AND permission
      */
-    public boolean isOpPermission() {
-        return opLevel >= 0;
+    @NotNull
+    public static CommandPermission and(@NotNull CommandPermission... permissions) {
+        return new CommandPermission(req -> {
+            for (CommandPermission permission : permissions) {
+                if (!permission.allows(req)) {
+                    return false;
+                }
+            }
+            return true;
+        });
+    }
+
+    /**
+     * Creates a permission that allows execution if
+     * any provided permission allows it.
+     *
+     * @param permissions the permissions to combine
+     * @return a combined OR permission
+     */
+    @NotNull
+    public static CommandPermission or(@NotNull CommandPermission... permissions) {
+        return new CommandPermission(req -> {
+            for (CommandPermission permission : permissions) {
+                if (permission.allows(req)) {
+                    return true;
+                }
+            }
+            return false;
+        });
+    }
+
+    /**
+     * Creates a permission from a single requirement predicate.
+     *
+     * @param test the requirement predicate
+     * @return a new {@link CommandPermission}
+     */
+    @NotNull
+    public static CommandPermission single(@NotNull Predicate<BasicCommandDetails> test) {
+        return new CommandPermission(test);
     }
 }

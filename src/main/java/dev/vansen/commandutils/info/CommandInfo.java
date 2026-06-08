@@ -5,7 +5,9 @@ import dev.vansen.commandutils.permission.CommandPermission;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Provides information about a command, including its description, aliases, and required permissions.
@@ -51,7 +53,9 @@ public final class CommandInfo {
     @CanIgnoreReturnValue
     public CommandInfo aliases(@Nullable String... aliases) {
         if (aliases == null) return this;
-        this.aliases = List.of(aliases);
+        this.aliases = Arrays.stream(aliases)
+                .filter(Objects::nonNull)
+                .toList();
         return this;
     }
 
@@ -79,7 +83,7 @@ public final class CommandInfo {
     @CanIgnoreReturnValue
     public CommandInfo aliases(@Nullable Aliases aliases) {
         if (aliases == null) return this;
-        this.aliases = aliases.getAliases();
+        this.aliases = aliases.aliases();
         return this;
     }
 
@@ -94,20 +98,6 @@ public final class CommandInfo {
     public CommandInfo permission(@Nullable CommandPermission permission) {
         if (permission == null) return this;
         this.permission = permission;
-        return this;
-    }
-
-    /**
-     * Sets the required permission for the command.
-     *
-     * @param permission the {@link CommandPermission} required to execute the command.
-     * @return this {@link CommandInfo} instance for method chaining.
-     */
-    @NotNull
-    @CanIgnoreReturnValue
-    public CommandInfo permission(@Nullable String permission) {
-        if (permission == null) return this;
-        this.permission = CommandPermission.permission(permission);
         return this;
     }
 

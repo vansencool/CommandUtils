@@ -9,17 +9,30 @@ import io.papermc.paper.command.brigadier.CommandSourceStack;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.minimessage.MiniMessage;
-import org.bukkit.*;
-import org.bukkit.command.*;
+import org.bukkit.Bukkit;
+import org.bukkit.GameMode;
+import org.bukkit.Location;
+import org.bukkit.OfflinePlayer;
+import org.bukkit.World;
+import org.bukkit.command.BlockCommandSender;
+import org.bukkit.command.CommandSender;
+import org.bukkit.command.ConsoleCommandSender;
+import org.bukkit.command.RemoteConsoleCommandSender;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
-import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.List;
+import java.util.NoSuchElementException;
+import java.util.Objects;
+import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -104,16 +117,6 @@ public record CommandWrapper(CommandContext<CommandSourceStack> context) {
     @Nullable
     public BlockCommandSender block() {
         return context.getSource().getExecutor() instanceof BlockCommandSender sender ? sender : null;
-    }
-
-    /**
-     * Retrieves the {@link ProxiedCommandSender} who executed the command.
-     *
-     * @return the proxied command sender who executed the command, can be null if the sender is not a proxied command.
-     */
-    @Nullable
-    public ProxiedCommandSender proxied() {
-        return context.getSource().getExecutor() instanceof ProxiedCommandSender sender ? sender : null;
     }
 
     /**
@@ -1021,7 +1024,7 @@ public record CommandWrapper(CommandContext<CommandSourceStack> context) {
     /**
      * Retrieves the plain sender type of the given context.
      *
-     * @return the plain sender type, can be "player", "console", "remote_console", "entity", "command_block", "proxied_sender" or "unknown".
+     * @return the plain sender type, can be "player", "console", "remote_console", "entity", "command_block", or "unknown".
      */
     public String plainSender() {
         return switch (senderType()) {
@@ -1030,7 +1033,6 @@ public record CommandWrapper(CommandContext<CommandSourceStack> context) {
             case REMOTE_CONSOLE -> "remote_console";
             case ENTITY -> "entity";
             case COMMAND_BLOCK -> "command_block";
-            case PROXIED -> "proxied_sender";
             default -> "unknown";
         };
     }
@@ -1038,7 +1040,7 @@ public record CommandWrapper(CommandContext<CommandSourceStack> context) {
     /**
      * Retrieves the friendly sender type of the given context.
      *
-     * @return the friendly sender type, can be "Player", "Console", "Remote Console", "Entity", "Command Block", "Proxied Command Sender" or "Unknown".
+     * @return the friendly sender type, can be "Player", "Console", "Remote Console", "Entity", "Command Block", or "Unknown".
      */
     public String friendlySender() {
         return switch (senderType()) {
@@ -1047,18 +1049,17 @@ public record CommandWrapper(CommandContext<CommandSourceStack> context) {
             case REMOTE_CONSOLE -> "Remote Console";
             case ENTITY -> "Entity";
             case COMMAND_BLOCK -> "Command Block";
-            case PROXIED -> "Proxied Command Sender";
             default -> "Unknown";
         };
     }
 
     /**
-     * Retrieves the sender type as a human-readable string.
+     * Formats the sender type as a "Sent by <type>" string.
+     * <p>
+     * It is recommended to use {@link #friendlySender()} instead.
      *
-     * @return the sender type as a human-readable string.
-     * @deprecated Use {@link #friendlySender()} instead.
+     * @return the sender type as a "Sent by <type>" string, can be "Sent by a player", "Sent from the console", "Sent from a remote console", "Sent by an entity", "Sent by a command block", or "Sent by an unknown sender type".
      */
-    @ApiStatus.Obsolete
     public String senderTypeString() {
         return switch (senderType()) {
             case PLAYER -> "Sent by a player";
@@ -1066,15 +1067,14 @@ public record CommandWrapper(CommandContext<CommandSourceStack> context) {
             case REMOTE_CONSOLE -> "Sent from a remote console";
             case ENTITY -> "Sent by an entity";
             case COMMAND_BLOCK -> "Sent by a command block";
-            case PROXIED -> "Sent by a proxied command sender";
-            default -> "Unknown sender type";
+            default -> "Sent by an unknown sender type";
         };
     }
 
     /**
      * Retrieves the sender type as a short code.
      *
-     * @return the sender type as a short code, can be "P", "C", "R", "E", "B", "X" or "?".
+     * @return the sender type as a short code, can be "P", "C", "R", "E", "B", or "?".
      */
     public String senderTypeCode() {
         return switch (senderType()) {
@@ -1083,7 +1083,6 @@ public record CommandWrapper(CommandContext<CommandSourceStack> context) {
             case REMOTE_CONSOLE -> "R";
             case ENTITY -> "E";
             case COMMAND_BLOCK -> "B";
-            case PROXIED -> "X";
             default -> "?";
         };
     }
@@ -1095,12 +1094,11 @@ public record CommandWrapper(CommandContext<CommandSourceStack> context) {
      */
     public String senderTypeDescription() {
         return switch (senderType()) {
-            case PLAYER -> "A player is a human user who is interacting with the game.";
-            case CONSOLE -> "The console is the main interface for administering the game.";
+            case PLAYER -> "A player who is playing the game.";
+            case CONSOLE -> "The console that has access to the server commands.";
             case REMOTE_CONSOLE -> "A remote console is a console that is accessed from a remote location.";
             case ENTITY -> "An entity is a non-player character (such as mobs) in the game.";
             case COMMAND_BLOCK -> "A command block is a block that can execute commands.";
-            case PROXIED -> "A proxied sender is a command sender that is proxied through /execute, or similar.";
             default -> "Unknown sender type";
         };
     }
@@ -1151,12 +1149,20 @@ public record CommandWrapper(CommandContext<CommandSourceStack> context) {
     }
 
     /**
-     * Checks if the sender is a proxied command sender.
-     *
-     * @return true if the sender is a proxied command sender, false otherwise.
+     * This is a alias for {@link #isExecutedAs()}, because "proxied" is a more common term.
      */
     public boolean isProxied() {
-        return senderType() == SenderTypes.PROXIED;
+        return isExecutedAs();
+    }
+
+    /**
+     * Checks whether the command is being executed with a different execution context
+     * than the original command sender (e.g. via /execute as).
+     *
+     * @return true if the execution context differs from the sender, meaning the command is executed as another entity; false otherwise.
+     */
+    public boolean isExecutedAs() {
+        return context.getSource().getExecutor() != null && context.getSource().getExecutor() != sender();
     }
 
     /**
@@ -1168,9 +1174,8 @@ public record CommandWrapper(CommandContext<CommandSourceStack> context) {
         if (sender() instanceof Player) return SenderTypes.PLAYER;
         if (sender() instanceof ConsoleCommandSender) return SenderTypes.CONSOLE;
         if (sender() instanceof RemoteConsoleCommandSender) return SenderTypes.REMOTE_CONSOLE;
-        if (sender() instanceof Entity) return SenderTypes.ENTITY;
         if (sender() instanceof BlockCommandSender) return SenderTypes.COMMAND_BLOCK;
-        if (sender() instanceof ProxiedCommandSender) return SenderTypes.PROXIED;
+        if (isExecutedAs()) return SenderTypes.ENTITY;
         return SenderTypes.UNKNOWN;
     }
 
@@ -1564,8 +1569,7 @@ public record CommandWrapper(CommandContext<CommandSourceStack> context) {
                 type == CheckType.CONSOLE && isConsole() ||
                 type == CheckType.REMOTE_CONSOLE && isRemoteConsole() ||
                 type == CheckType.ENTITY && isEntity() ||
-                type == CheckType.COMMAND_BLOCK && isBlock() ||
-                type == CheckType.PROXIED_SENDER && isProxied())) {
+                type == CheckType.COMMAND_BLOCK && isBlock())) {
             task.run();
             check(c -> false);
         }

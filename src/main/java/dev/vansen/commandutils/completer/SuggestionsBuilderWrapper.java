@@ -12,24 +12,17 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
-import java.util.stream.StreamSupport;
+import java.util.stream.Stream;
 
 /**
  * A wrapper class for {@link SuggestionsBuilder} that provides additional functionality for building suggestions.
  */
 @SuppressWarnings({"unused", "UnstableApiUsage"})
 public record SuggestionsBuilderWrapper(@NotNull SuggestionsBuilder builder) {
-
-    /**
-     * Constructs a new {@link SuggestionsBuilderWrapper} with the specified {@link SuggestionsBuilder}.
-     *
-     * @param builder the {@link SuggestionsBuilder} instance to wrap. This should not be null.
-     */
-    public SuggestionsBuilderWrapper {
-    }
 
     /**
      * Adds suggestions to the list of completions.
@@ -201,26 +194,8 @@ public record SuggestionsBuilderWrapper(@NotNull SuggestionsBuilder builder) {
 
     /**
      * Adds list of suggestions to the list of completions if the value starts with current argument.
-     *
-     * @param values the suggestions to be added.
-     * @return this instance for method chaining.
-     */
-    @NotNull
-    @CanIgnoreReturnValue
-    public SuggestionsBuilderWrapper suggestIfValueStartsWithCurrent(@NotNull Iterable<String> values) {
-        if (currentArg().isEmpty()) {
-            values.forEach(builder::suggest);
-            return this;
-        }
-        StreamSupport.stream(values.spliterator(), false)
-                .filter(value -> value.toLowerCase().startsWith(currentArgLowercase()))
-                .forEach(builder::suggest);
-        return this;
-    }
-
-
-    /**
-     * Adds list of suggestions to the list of completions if the value starts with current argument.
+     * <p>
+     * In simple words, if the user typed "he", and the suggestions are "hello", "hey", "hi", then only "hello" and "hey" will be suggested.
      *
      * @param values the suggestions to be added.
      * @return this instance for method chaining.
@@ -229,6 +204,80 @@ public record SuggestionsBuilderWrapper(@NotNull SuggestionsBuilder builder) {
     @CanIgnoreReturnValue
     public SuggestionsBuilderWrapper suggestIfValueStartsWithCurrent(@NotNull String... values) {
         return suggestIfValueStartsWithCurrent(Arrays.asList(values));
+    }
+
+    /**
+     * Adds list of suggestions to the list of completions if the value starts with current argument.
+     * <p>
+     * In simple words, if the user typed "he", and the suggestions are "hello", "hey", "hi", then only "hello" and "hey" will be suggested.
+     *
+     * @param values the suggestions to be added.
+     * @return this instance for method chaining.
+     */
+    @NotNull
+    @CanIgnoreReturnValue
+    public SuggestionsBuilderWrapper suggestIfValueStartsWithCurrent(@NotNull Collection<String> values) {
+        if (currentArg().isEmpty()) {
+            values.forEach(builder::suggest);
+            return this;
+        }
+        values.stream()
+                .filter(value -> value.toLowerCase().startsWith(currentArgLowercase()))
+                .forEach(builder::suggest);
+        return this;
+    }
+
+    /**
+     * Adds list of suggestions to the list of completions if the value starts with current argument.
+     * <p>
+     * In simple words, if the user typed "he", and the suggestions are "hello", "hey", "hi", then only "hello" and "hey" will be suggested.
+     *
+     * @param values the suggestions to be added.
+     * @return this instance for method chaining.
+     */
+    @NotNull
+    @CanIgnoreReturnValue
+    public SuggestionsBuilderWrapper suggestIfValueStartsWithCurrent(@NotNull Stream<String> values) {
+        (currentArg().isEmpty() ? values : values.filter(v -> v.toLowerCase().startsWith(currentArgLowercase())))
+                .forEach(builder::suggest);
+        return this;
+    }
+
+    /**
+     * Adds list of suggestions to the list of completions if the value starts with current argument.
+     * <p>
+     * In simple words, if the user typed "he", and the suggestions are "hello", "hey", "hi", then only "hello" and "hey" will be suggested.
+     *
+     * @param values the suggestions to be added.
+     * @return this instance for method chaining.
+     */
+    @NotNull
+    @CanIgnoreReturnValue
+    public SuggestionsBuilderWrapper suggestSuggestionIfValueStartsWithCurrent(@NotNull Collection<Suggestion> values) {
+        if (currentArg().isEmpty()) {
+            values.forEach(this::suggest);
+            return this;
+        }
+        values.stream()
+                .filter(value -> value.text().toLowerCase().startsWith(currentArgLowercase()))
+                .forEach(this::suggest);
+        return this;
+    }
+
+    /**
+     * Adds list of suggestions to the list of completions if the value starts with current argument.
+     * <p>
+     * In simple words, if the user typed "he", and the suggestions are "hello", "hey", "hi", then only "hello" and "hey" will be suggested.
+     *
+     * @param values the suggestions to be added.
+     * @return this instance for method chaining.
+     */
+    @NotNull
+    @CanIgnoreReturnValue
+    public SuggestionsBuilderWrapper suggestSuggestionIfValueStartsWithCurrent(@NotNull Stream<Suggestion> values) {
+        (currentArg().isEmpty() ? values : values.filter(v -> v.text().toLowerCase().startsWith(currentArgLowercase())))
+                .forEach(this::suggest);
+        return this;
     }
 
     /**
@@ -272,7 +321,7 @@ public record SuggestionsBuilderWrapper(@NotNull SuggestionsBuilder builder) {
      *
      * @return the suggestions helper
      */
-    @Deprecated
+    @Deprecated(forRemoval = true)
     public SuggestionsHelper helper() {
         return new SuggestionsHelper(this);
     }
@@ -294,7 +343,7 @@ public record SuggestionsBuilderWrapper(@NotNull SuggestionsBuilder builder) {
      * @return an {@link CompletableFuture} containing an empty {@link Suggestions}
      */
     @NotNull
-    public CompletableFuture<Suggestions> empty() {
+    public static CompletableFuture<Suggestions> empty() {
         return Suggestions.empty();
     }
 
@@ -304,7 +353,7 @@ public record SuggestionsBuilderWrapper(@NotNull SuggestionsBuilder builder) {
      * @return an empty {@link Suggestions}
      */
     @NotNull
-    public Suggestions emptyFuture() {
+    public static Suggestions emptyFuture() {
         return new Suggestions(StringRange.at(0), new ArrayList<>());
     }
 

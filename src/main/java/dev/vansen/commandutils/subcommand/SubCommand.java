@@ -5,13 +5,15 @@ import com.mojang.brigadier.arguments.ArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import dev.vansen.commandutils.CommandUtils;
-import dev.vansen.commandutils.argument.AbstractCommandArgument;
 import dev.vansen.commandutils.argument.Argument;
 import dev.vansen.commandutils.argument.ArgumentNester;
 import dev.vansen.commandutils.argument.CommandArgument;
 import dev.vansen.commandutils.argument.finder.ArgumentString;
+import dev.vansen.commandutils.command.BasicCommandDetails;
 import dev.vansen.commandutils.command.CommandExecutor;
-import dev.vansen.commandutils.command.*;
+import dev.vansen.commandutils.command.CommandWrapper;
+import dev.vansen.commandutils.command.ExecutableSender;
+import dev.vansen.commandutils.command.Position;
 import dev.vansen.commandutils.completer.CompletionHandler;
 import dev.vansen.commandutils.completer.SuggestionsBuilderWrapper;
 import dev.vansen.commandutils.exceptions.CmdException;
@@ -19,16 +21,17 @@ import dev.vansen.commandutils.messages.MessageTypes;
 import dev.vansen.commandutils.permission.CommandPermission;
 import dev.vansen.commandutils.sender.SenderTypes;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
-import org.bukkit.command.*;
+import org.bukkit.command.BlockCommandSender;
+import org.bukkit.command.CommandSender;
+import org.bukkit.command.ConsoleCommandSender;
+import org.bukkit.command.ProxiedCommandSender;
+import org.bukkit.command.RemoteConsoleCommandSender;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
-import java.util.Optional;
-import java.util.function.Predicate;
 
 /**
  * Represents a subcommand in a command.
@@ -71,71 +74,81 @@ public final class SubCommand {
 
     private void execute() {
         builder.executes(context -> {
-            CommandSender sender = context.getSource().getSender();
             CommandWrapper wrapped = new CommandWrapper(context);
-            boolean done = false;
+            CommandSender sender = context.getSource().getSender();
+            Entity executor = context.getSource().getExecutor();
+
+            boolean executed = false;
 
             try {
-                switch (sender) {
-                    case Player player when playerExecutor != null -> {
-                        done = true;
-                        playerExecutor.execute(wrapped);
+                if (wrapped.isExecutedAs() && proxiedExecutor != null) {
+                    proxiedExecutor.executeSafely(wrapped);
+                    executed = true;
+                } else if (executor != null && !(executor instanceof Player) && entityExecutor != null) {
+                    entityExecutor.executeSafely(wrapped);
+                    executed = true;
+                } else {
+                    switch (sender) {
+                        case Player player when playerExecutor != null -> {
+                            playerExecutor.executeSafely(wrapped);
+                            executed = true;
+                        }
+                        case ConsoleCommandSender consoleCommandSender when consoleExecutor != null -> {
+                            consoleExecutor.executeSafely(wrapped);
+                            executed = true;
+                        }
+                        case RemoteConsoleCommandSender remoteConsoleCommandSender when remoteConsoleExecutor != null -> {
+                            remoteConsoleExecutor.executeSafely(wrapped);
+                            executed = true;
+                        }
+                        case BlockCommandSender blockCommandSender when blockExecutor != null -> {
+                            blockExecutor.executeSafely(wrapped);
+                            executed = true;
+                        }
+                        default -> {
+                        }
                     }
-                    case ConsoleCommandSender consoleCommandSender when consoleExecutor != null -> {
-                        done = true;
-                        consoleExecutor.execute(wrapped);
-                    }
-                    case RemoteConsoleCommandSender remoteConsoleCommandSender when remoteConsoleExecutor != null -> {
-                        done = true;
-                        remoteConsoleExecutor.execute(wrapped);
-                    }
-                    case BlockCommandSender blockCommandSender when blockExecutor != null -> {
-                        done = true;
-                        blockExecutor.execute(wrapped);
-                    }
-                    default -> {
-                        switch (context.getSource().getExecutor()) {
-                            case Entity entity when entityExecutor != null -> {
-                                done = true;
-                                entityExecutor.execute(wrapped);
-                            }
-                            case ProxiedCommandSender proxiedCommandSender when proxiedExecutor != null -> {
-                                done = true;
-                                proxiedExecutor.execute(wrapped);
-                            }
-                            case null, default -> {
+                }
+
+                if (!executed && defaultExecutor != null) {
+                    if (senderTypes == null) {
+                        defaultExecutor.executeSafely(wrapped);
+                        executed = true;
+                    } else {
+                        for (SenderTypes type : senderTypes) {
+                            if (type == wrapped.senderType()) {
+                                defaultExecutor.executeSafely(wrapped);
+                                executed = true;
+                                break;
                             }
                         }
                     }
                 }
-                if (!done) {
-                    Optional.ofNullable(defaultExecutor)
-                            .ifPresent(executor -> {
-                                if (senderTypes == null) executor.execute(wrapped);
-                                else if (Arrays.stream(senderTypes)
-                                        .anyMatch(type -> type == wrapped.senderType()))
-                                    executor.execute(wrapped);
-                                else {
-                                    switch (wrapped.senderType()) {
-                                        case PLAYER -> wrapped.response(MessageTypes.NOT_ALLOWED_PLAYER);
-                                        case CONSOLE -> wrapped.response(MessageTypes.NOT_ALLOWED_CONSOLE);
-                                        case REMOTE_CONSOLE ->
-                                                wrapped.response(MessageTypes.NOT_ALLOWED_REMOTE_CONSOLE);
-                                        case ENTITY -> wrapped.response(MessageTypes.NOT_ALLOWED_ENTITY);
-                                        case COMMAND_BLOCK -> wrapped.response(MessageTypes.NOT_ALLOWED_COMMAND_BLOCK);
-                                        case PROXIED -> wrapped.response(MessageTypes.NOT_ALLOWED_PROXIED_SENDER);
-                                    }
-                                }
-                            });
+
+                if (!executed) {
+                    switch (wrapped.senderType()) {
+                        case PLAYER -> wrapped.response(MessageTypes.NOT_ALLOWED_PLAYER);
+                        case CONSOLE -> wrapped.response(MessageTypes.NOT_ALLOWED_CONSOLE);
+                        case REMOTE_CONSOLE -> wrapped.response(MessageTypes.NOT_ALLOWED_REMOTE_CONSOLE);
+                        case ENTITY -> wrapped.response(MessageTypes.NOT_ALLOWED_ENTITY);
+                        case COMMAND_BLOCK -> wrapped.response(MessageTypes.NOT_ALLOWED_COMMAND_BLOCK);
+                    }
                 }
+
                 return 1;
             } catch (CmdException e) {
                 e.send();
+                return 0;
+            } catch (Throwable e) {
+                MessageTypes.sendUnexpectedError(sender, e);
                 return 0;
             }
         });
     }
 
+    /**
+     * Sets the executor for the subcommand if any executor is set, bad naming choice sorry.
+     */
     private void executeIf() {
         if (defaultExecutor != null || playerExecutor != null || consoleExecutor != null || remoteConsoleExecutor != null || entityExecutor != null || blockExecutor != null || proxiedExecutor != null) {
             execute();
@@ -280,19 +293,6 @@ public final class SubCommand {
     @CanIgnoreReturnValue
     public SubCommand argument(@NotNull CommandArgument argument) {
         argumentStack.add(argument.get());
-        return this;
-    }
-
-    /**
-     * Adds an argument to the subcommand.
-     *
-     * @param argument the {@link AbstractCommandArgument}
-     * @return this {@link SubCommand} instance for chaining.
-     */
-    @NotNull
-    @CanIgnoreReturnValue
-    public SubCommand argument(@NotNull AbstractCommandArgument argument) {
-        argumentStack.add(argument.build().get());
         return this;
     }
 
@@ -591,26 +591,10 @@ public final class SubCommand {
     }
 
     /**
-     * Adds a subcommand to the subcommand.
-     * Subcommands are separate execution paths that have their own logic.
-     *
-     * @param subCommand the {@link AbstractSubCommand} to be added.
-     * @return this {@link SubCommand} instance for chaining.
-     */
-    @NotNull
-    @CanIgnoreReturnValue
-    public SubCommand subCommand(@NotNull AbstractSubCommand subCommand) {
-        builder.then(subCommand.build().get());
-        return this;
-    }
-
-    /**
      * Disables argument nesting for the subcommand.
      * <p>
-     * Note, disabling this (may) have 2 or even more arguments in a single argument, which is not recommended.
-     * So it would be "/command [arg1 | arg2 | arg3]" instead of "/command arg1 arg2 arg3", there are other unexpected results as well, for example arguments not working.
-     * <p>
-     * Some cases where this would work would be using {@link CommandArgument} and {@link CommandArgument#argument(CommandArgument)}, but if disabled nesting in command arguments will lead to it not working.
+     * Note, disabling this (may) have 2 or even more arguments in a single argument.
+     * So it would be "/command [arg1 | arg2 | arg3]" instead of "/command arg1 arg2 arg3". There are other unexpected results as well.
      *
      * @return this {@link SubCommand} instance for chaining.
      */
@@ -685,50 +669,20 @@ public final class SubCommand {
     }
 
     /**
-     * Adds a permission requirement to the subcommand.
+     * Sets the permission of the subcommand.
      *
-     * @param permission the {@link CommandPermission} to be added.
-     * @return this {@link SubCommand} instance for chaining.
+     * @param permission a {@link CommandPermission} for setting metadata.
+     * @return this {@link CommandUtils} instance for chaining.
      */
     @NotNull
     @CanIgnoreReturnValue
     public SubCommand permission(@NotNull CommandPermission permission) {
-        if (permission.isOpPermission()) {
-            builder.requires(consumer -> consumer.getSender().isOp());
-        } else if (permission.getPermission() != null) {
-            builder.requires(consumer -> consumer.getSender().hasPermission(permission.getPermission()));
-        }
+        builder.requires(stack -> permission.allows(new BasicCommandDetails(stack)));
         return this;
     }
 
     /**
-     * The requirement of the subcommand, if the requirement is not met the subcommand will not execute, and not show in tab complete either.
-     *
-     * @param requirement the {@link Predicate} for the requirement
-     * @return this {@link SubCommand} instance for chaining
-     */
-    @NotNull
-    @CanIgnoreReturnValue
-    public SubCommand requirement(@NotNull Predicate<CommandRequirement> requirement) {
-        builder.requires(consumer -> requirement.test(new CommandRequirement(consumer)));
-        return this;
-    }
-
-    /**
-     * The requirement of the subcommand, if the requirement is not met the subcommand will not execute, and not show in tab complete either.
-     *
-     * @param checker the {@link BooleanChecker} for the requirement
-     * @return this {@link SubCommand} instance for chaining
-     */
-    @NotNull
-    @CanIgnoreReturnValue
-    public SubCommand requirement(@NotNull BooleanChecker checker) {
-        builder.requires(consumer -> checker.check());
-        return this;
-    }
-
-    /**
-     * Retrieves the {@link LiteralArgumentBuilder} for this subcommand.
+     * Builds and returns the {@link LiteralArgumentBuilder} representing the subcommand, will nest arguments if not disabled, and will set the executor if any executor is set.
      *
      * @return the {@link LiteralArgumentBuilder} representing the subcommand.
      */

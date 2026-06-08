@@ -1,12 +1,12 @@
-package dev.vansen.commandutils.subcommand;
+package dev.vansen.commandutils.expansion.simple;
 
-import dev.vansen.commandutils.argument.AbstractCommandArgument;
 import dev.vansen.commandutils.argument.CommandArgument;
 import dev.vansen.commandutils.command.CommandExecutor;
 import dev.vansen.commandutils.command.ExecutableSender;
 import dev.vansen.commandutils.command.Position;
 import dev.vansen.commandutils.permission.CommandPermission;
 import dev.vansen.commandutils.sender.SenderTypes;
+import dev.vansen.commandutils.subcommand.SubCommand;
 import org.bukkit.command.BlockCommandSender;
 import org.bukkit.command.ConsoleCommandSender;
 import org.bukkit.entity.Entity;
@@ -32,12 +32,8 @@ public class SimpleSubCommand {
     private CommandExecutor proxiedExecutor;
     private CommandPermission permission;
     private List<CommandArgument> arguments;
-    private List<AbstractCommandArgument> abstractArguments;
     private List<SubCommand> subCommands;
-    private List<AbstractSubCommand> abstractSubCommands;
     private Position argumentPosition;
-    private Position abstractArgumentPosition;
-    private Position abstractSubCommandPosition;
     private SenderTypes[] senderTypes;
 
     /**
@@ -172,18 +168,6 @@ public class SimpleSubCommand {
     }
 
     /**
-     * Sets the abstract arguments for this subcommand.
-     *
-     * @param abstractArguments the list of {@link AbstractCommandArgument} for this subcommand.
-     * @return the current {@link SimpleSubCommand} instance for chaining.
-     */
-    @ApiStatus.NonExtendable
-    public SimpleSubCommand abstractArguments(@NotNull List<AbstractCommandArgument> abstractArguments) {
-        this.abstractArguments = abstractArguments;
-        return this;
-    }
-
-    /**
      * Sets the subcommands for this subcommand.
      *
      * @param subCommands the list of {@link SubCommand} to be used as subcommands.
@@ -196,18 +180,6 @@ public class SimpleSubCommand {
     }
 
     /**
-     * Sets the abstract subcommands for this subcommand.
-     *
-     * @param abstractSubCommands the list of {@link AbstractSubCommand} to be used as abstract subcommands.
-     * @return the current {@link SimpleSubCommand} instance for chaining.
-     */
-    @ApiStatus.NonExtendable
-    public SimpleSubCommand abstractSubCommands(@NotNull List<AbstractSubCommand> abstractSubCommands) {
-        this.abstractSubCommands = abstractSubCommands;
-        return this;
-    }
-
-    /**
      * Sets the position of the arguments for this subcommand.
      *
      * @param position the {@link Position} of the arguments.
@@ -216,30 +188,6 @@ public class SimpleSubCommand {
     @ApiStatus.NonExtendable
     public SimpleSubCommand argumentPosition(@NotNull Position position) {
         this.argumentPosition = position;
-        return this;
-    }
-
-    /**
-     * Sets the position of the abstract arguments for this subcommand.
-     *
-     * @param position the {@link Position} of the abstract arguments.
-     * @return the current {@link SimpleSubCommand} instance for chaining.
-     */
-    @ApiStatus.NonExtendable
-    public SimpleSubCommand abstractArgumentPosition(@NotNull Position position) {
-        this.abstractArgumentPosition = position;
-        return this;
-    }
-
-    /**
-     * Sets the position of the abstract subcommands for this subcommand.
-     *
-     * @param position the {@link Position} of the abstract subcommands.
-     * @return the current {@link SimpleSubCommand} instance for chaining.
-     */
-    @ApiStatus.NonExtendable
-    public SimpleSubCommand abstractSubCommandPosition(@NotNull Position position) {
-        this.abstractSubCommandPosition = position;
         return this;
     }
 
@@ -276,35 +224,11 @@ public class SimpleSubCommand {
         if (permission != null) subCommand.permission(permission);
 
         if (argumentPosition == Position.LAST) {
-            if (abstractSubCommandPosition == Position.LAST) {
-                if (subCommands != null) subCommands.forEach(subCommand::subCommand);
-                if (abstractSubCommands != null) abstractSubCommands.forEach(subCommand::subCommand);
-            } else {
-                if (abstractSubCommands != null) abstractSubCommands.forEach(subCommand::subCommand);
-                if (subCommands != null) subCommands.forEach(subCommand::subCommand);
-            }
-            if (abstractArgumentPosition == Position.LAST) {
-                if (arguments != null) arguments.forEach(subCommand::argument);
-                if (abstractArguments != null) abstractArguments.forEach(subCommand::argument);
-            } else {
-                if (abstractArguments != null) abstractArguments.forEach(subCommand::argument);
-                if (arguments != null) arguments.forEach(subCommand::argument);
-            }
+            if (subCommands != null) subCommands.forEach(subCommand::subCommand);
+            if (arguments != null) arguments.forEach(subCommand::argument);
         } else {
-            if (abstractArgumentPosition == Position.LAST) {
-                if (arguments != null) arguments.forEach(subCommand::argument);
-                if (abstractArguments != null) abstractArguments.forEach(subCommand::argument);
-            } else {
-                if (abstractArguments != null) abstractArguments.forEach(subCommand::argument);
-                if (arguments != null) arguments.forEach(subCommand::argument);
-            }
-            if (abstractSubCommandPosition == Position.LAST) {
-                if (subCommands != null) subCommands.forEach(subCommand::subCommand);
-                if (abstractSubCommands != null) abstractSubCommands.forEach(subCommand::subCommand);
-            } else {
-                if (abstractSubCommands != null) abstractSubCommands.forEach(subCommand::subCommand);
-                if (subCommands != null) subCommands.forEach(subCommand::subCommand);
-            }
+            if (arguments != null) arguments.forEach(subCommand::argument);
+            if (subCommands != null) subCommands.forEach(subCommand::subCommand);
         }
 
         return subCommand;

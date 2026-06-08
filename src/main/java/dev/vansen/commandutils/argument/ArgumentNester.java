@@ -9,6 +9,11 @@ import java.util.List;
 
 /**
  * Utility class for nesting arguments into a command.
+ * <p>
+ * Nesting arguments is useful when building complex command structures where
+ * multiple arguments need to be grouped together under a single command node, such as shown in the teleport command example: <a href="https://vansen.gitbook.io/commandutils/examples/examples">Teleport Command Example</a>
+ * <p>
+ * Normally, it will create many issues, such as only the last argument being recognized, or nothing executing at all, but this utility handles it more properly.
  */
 @SuppressWarnings({"unused", "UnstableApiUsage"})
 public final class ArgumentNester {

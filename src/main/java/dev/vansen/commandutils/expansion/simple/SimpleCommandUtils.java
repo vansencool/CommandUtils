@@ -1,6 +1,6 @@
-package dev.vansen.commandutils;
+package dev.vansen.commandutils.expansion.simple;
 
-import dev.vansen.commandutils.argument.AbstractCommandArgument;
+import dev.vansen.commandutils.CommandUtils;
 import dev.vansen.commandutils.argument.CommandArgument;
 import dev.vansen.commandutils.command.CommandExecutor;
 import dev.vansen.commandutils.command.ExecutableSender;
@@ -8,7 +8,6 @@ import dev.vansen.commandutils.command.Position;
 import dev.vansen.commandutils.info.Aliases;
 import dev.vansen.commandutils.info.CommandInfo;
 import dev.vansen.commandutils.sender.SenderTypes;
-import dev.vansen.commandutils.subcommand.AbstractSubCommand;
 import dev.vansen.commandutils.subcommand.SubCommand;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
@@ -16,9 +15,10 @@ import org.jetbrains.annotations.NotNull;
 import java.util.List;
 
 /**
- * A utility class for simplifying the creation, customization, and registration of commands.
+ * A utility class for simplifying the creation, customization, and registration of commands, somewhat inspired by Minestom's command system.
  * Supports specifying executors for various sender types, defining arguments, aliases, subcommands, and more.
  */
+@ApiStatus.Experimental
 @SuppressWarnings("unused")
 public class SimpleCommandUtils {
 
@@ -34,12 +34,8 @@ public class SimpleCommandUtils {
     private CommandInfo info;
     private SenderTypes[] sender;
     private List<CommandArgument> arguments;
-    private List<AbstractCommandArgument> abstractArguments;
     private List<SubCommand> subCommands;
-    private List<AbstractSubCommand> abstractSubCommands;
     private Position argumentPosition;
-    private Position abstractArgumentPosition;
-    private Position abstractSubCommandPosition;
 
     /**
      * Constructs a SimpleCommandUtils instance with a command name.
@@ -215,18 +211,6 @@ public class SimpleCommandUtils {
     }
 
     /**
-     * Adds abstract arguments to the command.
-     *
-     * @param abstractArguments a list of abstract command arguments.
-     * @return the current instance for chaining.
-     */
-    @ApiStatus.NonExtendable
-    public SimpleCommandUtils abstractArguments(@NotNull List<AbstractCommandArgument> abstractArguments) {
-        this.abstractArguments = abstractArguments;
-        return this;
-    }
-
-    /**
      * Adds subcommands to the command.
      *
      * @param subCommands a list of subcommands.
@@ -239,18 +223,6 @@ public class SimpleCommandUtils {
     }
 
     /**
-     * Adds abstract subcommands to the command.
-     *
-     * @param abstractSubCommands a list of abstract subcommands.
-     * @return the current instance for chaining.
-     */
-    @ApiStatus.NonExtendable
-    public SimpleCommandUtils abstractSubCommands(@NotNull List<AbstractSubCommand> abstractSubCommands) {
-        this.abstractSubCommands = abstractSubCommands;
-        return this;
-    }
-
-    /**
      * Sets the position of command arguments.
      *
      * @param position the argument position.
@@ -259,30 +231,6 @@ public class SimpleCommandUtils {
     @ApiStatus.NonExtendable
     public SimpleCommandUtils argumentPosition(@NotNull Position position) {
         this.argumentPosition = position;
-        return this;
-    }
-
-    /**
-     * Sets the position of abstract command arguments.
-     *
-     * @param position the abstract argument position.
-     * @return the current instance for chaining.
-     */
-    @ApiStatus.NonExtendable
-    public SimpleCommandUtils abstractArgumentPosition(@NotNull Position position) {
-        this.abstractArgumentPosition = position;
-        return this;
-    }
-
-    /**
-     * Sets the position of abstract subcommands.
-     *
-     * @param position the abstract subcommand position.
-     * @return the current instance for chaining.
-     */
-    @ApiStatus.NonExtendable
-    public SimpleCommandUtils abstractSubCommandPosition(@NotNull Position position) {
-        this.abstractSubCommandPosition = position;
         return this;
     }
 
@@ -308,35 +256,11 @@ public class SimpleCommandUtils {
         if (info != null) commandUtils.info(info);
 
         if (argumentPosition == Position.LAST) {
-            if (abstractSubCommandPosition == Position.LAST) {
-                if (subCommands != null) subCommands.forEach(commandUtils::subCommand);
-                if (abstractSubCommands != null) abstractSubCommands.forEach(commandUtils::subCommand);
-            } else {
-                if (abstractSubCommands != null) abstractSubCommands.forEach(commandUtils::subCommand);
-                if (subCommands != null) subCommands.forEach(commandUtils::subCommand);
-            }
-            if (abstractArgumentPosition == Position.LAST) {
-                if (arguments != null) arguments.forEach(commandUtils::argument);
-                if (abstractArguments != null) abstractArguments.forEach(commandUtils::argument);
-            } else {
-                if (abstractArguments != null) abstractArguments.forEach(commandUtils::argument);
-                if (arguments != null) arguments.forEach(commandUtils::argument);
-            }
+            if (subCommands != null) subCommands.forEach(commandUtils::subCommand);
+            if (arguments != null) arguments.forEach(commandUtils::argument);
         } else {
-            if (abstractArgumentPosition == Position.LAST) {
-                if (arguments != null) arguments.forEach(commandUtils::argument);
-                if (abstractArguments != null) abstractArguments.forEach(commandUtils::argument);
-            } else {
-                if (abstractArguments != null) abstractArguments.forEach(commandUtils::argument);
-                if (arguments != null) arguments.forEach(commandUtils::argument);
-            }
-            if (abstractSubCommandPosition == Position.LAST) {
-                if (subCommands != null) subCommands.forEach(commandUtils::subCommand);
-                if (abstractSubCommands != null) abstractSubCommands.forEach(commandUtils::subCommand);
-            } else {
-                if (abstractSubCommands != null) abstractSubCommands.forEach(commandUtils::subCommand);
-                if (subCommands != null) subCommands.forEach(commandUtils::subCommand);
-            }
+            if (arguments != null) arguments.forEach(commandUtils::argument);
+            if (subCommands != null) subCommands.forEach(commandUtils::subCommand);
         }
 
         return commandUtils;

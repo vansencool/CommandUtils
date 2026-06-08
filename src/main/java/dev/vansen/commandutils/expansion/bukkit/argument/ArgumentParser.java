@@ -1,4 +1,4 @@
-package dev.vansen.commandutils.bukkit.argument;
+package dev.vansen.commandutils.expansion.bukkit.argument;
 
 import org.jetbrains.annotations.NotNull;
 

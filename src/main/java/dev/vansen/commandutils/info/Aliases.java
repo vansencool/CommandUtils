@@ -4,13 +4,11 @@ import java.util.List;
 
 /**
  * Represents a collection of aliases for a command.
+ *
+ * @param aliases The list of aliases for the command.
  */
 @SuppressWarnings("unused")
-public final class Aliases {
-    /**
-     * The list of aliases for the command.
-     */
-    private final List<String> aliases;
+public record Aliases(List<String> aliases) {
 
     /**
      * Creates a new Aliases instance from an array of strings.
@@ -18,16 +16,7 @@ public final class Aliases {
      * @param aliases The aliases for the command.
      */
     public Aliases(String... aliases) {
-        this.aliases = List.of(aliases);
-    }
-
-    /**
-     * Creates a new Aliases instance from a list of strings.
-     *
-     * @param aliases The aliases for the command.
-     */
-    public Aliases(List<String> aliases) {
-        this.aliases = aliases;
+        this(List.of(aliases));
     }
 
     /**
@@ -55,7 +44,8 @@ public final class Aliases {
      *
      * @return The list of aliases.
      */
-    public List<String> getAliases() {
+    @Override
+    public List<String> aliases() {
         return aliases;
     }
 }

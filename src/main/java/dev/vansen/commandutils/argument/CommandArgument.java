@@ -1,34 +1,43 @@
 package dev.vansen.commandutils.argument;
 
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
-import com.mojang.brigadier.arguments.*;
+import com.mojang.brigadier.arguments.ArgumentType;
+import com.mojang.brigadier.arguments.BoolArgumentType;
+import com.mojang.brigadier.arguments.DoubleArgumentType;
+import com.mojang.brigadier.arguments.FloatArgumentType;
+import com.mojang.brigadier.arguments.IntegerArgumentType;
+import com.mojang.brigadier.arguments.LongArgumentType;
+import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import dev.vansen.commandutils.argument.arguments.ColorArgumentType;
 import dev.vansen.commandutils.argument.arguments.CommandBlockModeArgumentType;
 import dev.vansen.commandutils.argument.arguments.PlayerArgumentType;
 import dev.vansen.commandutils.argument.finder.ArgumentString;
+import dev.vansen.commandutils.command.BasicCommandDetails;
 import dev.vansen.commandutils.command.CommandExecutor;
-import dev.vansen.commandutils.command.*;
+import dev.vansen.commandutils.command.CommandWrapper;
+import dev.vansen.commandutils.command.ExecutableSender;
+import dev.vansen.commandutils.command.Position;
 import dev.vansen.commandutils.completer.CompletionHandler;
 import dev.vansen.commandutils.completer.SuggestionsBuilderWrapper;
 import dev.vansen.commandutils.exceptions.CmdException;
 import dev.vansen.commandutils.messages.MessageTypes;
 import dev.vansen.commandutils.permission.CommandPermission;
 import dev.vansen.commandutils.sender.SenderTypes;
-import dev.vansen.commandutils.subcommand.AbstractSubCommand;
 import dev.vansen.commandutils.subcommand.SubCommand;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 import io.papermc.paper.command.brigadier.argument.ArgumentTypes;
-import org.bukkit.command.*;
+import org.bukkit.command.BlockCommandSender;
+import org.bukkit.command.CommandSender;
+import org.bukkit.command.ConsoleCommandSender;
+import org.bukkit.command.ProxiedCommandSender;
+import org.bukkit.command.RemoteConsoleCommandSender;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
-import java.util.Optional;
-import java.util.function.Predicate;
 
 /**
  * Represents a command argument in the command system.
@@ -254,6 +263,28 @@ public final class CommandArgument {
     }
 
     /**
+     * Creates a new double argument with the specified name and minimum value.
+     *
+     * @param name the name of the argument.
+     * @param min  the minimum value for the double argument.
+     * @return a new {@link CommandArgument} instance representing a double argument.
+     */
+    public static CommandArgument doubleArg(@NotNull String name, double min) {
+        return new CommandArgument(name, DoubleArgumentType.doubleArg(min));
+    }
+
+    /**
+     * Creates a new double argument with the specified name and a minimum and maximum value.
+     *
+     * @param name the name of the argument.
+     * @param max  the maximum value for the double argument.
+     * @return a new {@link CommandArgument} instance representing a double argument.
+     */
+    public static CommandArgument doubleArg(@NotNull String name, double min, double max) {
+        return new CommandArgument(name, DoubleArgumentType.doubleArg(min, max));
+    }
+
+    /**
      * Creates a new float argument with the specified name.
      *
      * @param name the name of the argument.
@@ -265,6 +296,28 @@ public final class CommandArgument {
     }
 
     /**
+     * Creates a new float argument with the specified name and minimum value.
+     *
+     * @param name the name of the argument.
+     * @param min  the minimum value for the float argument.
+     * @return a new {@link CommandArgument} instance representing a float argument.
+     */
+    public static CommandArgument floatArg(@NotNull String name, float min) {
+        return new CommandArgument(name, FloatArgumentType.floatArg(min));
+    }
+
+    /**
+     * Creates a new float argument with the specified name and a minimum and maximum value.
+     *
+     * @param name the name of the argument.
+     * @param max  the maximum value for the float argument.
+     * @return a new {@link CommandArgument} instance representing a float argument.
+     */
+    public static CommandArgument floatArg(@NotNull String name, float min, float max) {
+        return new CommandArgument(name, FloatArgumentType.floatArg(min, max));
+    }
+
+    /**
      * Creates a new long argument with the specified name.
      *
      * @param name the name of the argument.
@@ -273,6 +326,28 @@ public final class CommandArgument {
     @NotNull
     public static CommandArgument longArg(@NotNull String name) {
         return new CommandArgument(name, LongArgumentType.longArg());
+    }
+
+    /**
+     * Creates a new long argument with the specified name and minimum value.
+     *
+     * @param name the name of the argument.
+     * @param min  the minimum value for the long argument.
+     * @return a new {@link CommandArgument} instance representing a long argument.
+     */
+    public static CommandArgument longArg(@NotNull String name, long min) {
+        return new CommandArgument(name, LongArgumentType.longArg(min));
+    }
+
+    /**
+     * Creates a new long argument with the specified name and a minimum and maximum value.
+     *
+     * @param name the name of the argument.
+     * @param max  the maximum value for the long argument.
+     * @return a new {@link CommandArgument} instance representing a long argument.
+     */
+    public static CommandArgument longArg(@NotNull String name, long min, long max) {
+        return new CommandArgument(name, LongArgumentType.longArg(min, max));
     }
 
     /**
@@ -365,71 +440,81 @@ public final class CommandArgument {
 
     private void execute() {
         argument.executes(context -> {
-            CommandSender sender = context.getSource().getSender();
             CommandWrapper wrapped = new CommandWrapper(context);
-            boolean done = false;
+            CommandSender sender = context.getSource().getSender();
+            Entity executor = context.getSource().getExecutor();
+
+            boolean executed = false;
 
             try {
-                switch (sender) {
-                    case Player player when playerExecutor != null -> {
-                        done = true;
-                        playerExecutor.execute(wrapped);
+                if (wrapped.isExecutedAs() && proxiedExecutor != null) {
+                    proxiedExecutor.executeSafely(wrapped);
+                    executed = true;
+                } else if (executor != null && !(executor instanceof Player) && entityExecutor != null) {
+                    entityExecutor.executeSafely(wrapped);
+                    executed = true;
+                } else {
+                    switch (sender) {
+                        case Player player when playerExecutor != null -> {
+                            playerExecutor.executeSafely(wrapped);
+                            executed = true;
+                        }
+                        case ConsoleCommandSender consoleCommandSender when consoleExecutor != null -> {
+                            consoleExecutor.executeSafely(wrapped);
+                            executed = true;
+                        }
+                        case RemoteConsoleCommandSender remoteConsoleCommandSender when remoteConsoleExecutor != null -> {
+                            remoteConsoleExecutor.executeSafely(wrapped);
+                            executed = true;
+                        }
+                        case BlockCommandSender blockCommandSender when blockExecutor != null -> {
+                            blockExecutor.executeSafely(wrapped);
+                            executed = true;
+                        }
+                        default -> {
+                        }
                     }
-                    case ConsoleCommandSender consoleCommandSender when consoleExecutor != null -> {
-                        done = true;
-                        consoleExecutor.execute(wrapped);
-                    }
-                    case RemoteConsoleCommandSender remoteConsoleCommandSender when remoteConsoleExecutor != null -> {
-                        done = true;
-                        remoteConsoleExecutor.execute(wrapped);
-                    }
-                    case BlockCommandSender blockCommandSender when blockExecutor != null -> {
-                        done = true;
-                        blockExecutor.execute(wrapped);
-                    }
-                    default -> {
-                        switch (context.getSource().getExecutor()) {
-                            case Entity entity when entityExecutor != null -> {
-                                done = true;
-                                entityExecutor.execute(wrapped);
-                            }
-                            case ProxiedCommandSender proxiedCommandSender when proxiedExecutor != null -> {
-                                done = true;
-                                proxiedExecutor.execute(wrapped);
-                            }
-                            case null, default -> {
+                }
+
+                if (!executed && defaultExecutor != null) {
+                    if (senderTypes == null) {
+                        defaultExecutor.executeSafely(wrapped);
+                        executed = true;
+                    } else {
+                        for (SenderTypes type : senderTypes) {
+                            if (type == wrapped.senderType()) {
+                                defaultExecutor.executeSafely(wrapped);
+                                executed = true;
+                                break;
                             }
                         }
                     }
                 }
-                if (!done) {
-                    Optional.ofNullable(defaultExecutor)
-                            .ifPresent(executor -> {
-                                if (senderTypes == null) executor.execute(wrapped);
-                                else if (Arrays.stream(senderTypes)
-                                        .anyMatch(type -> type == wrapped.senderType()))
-                                    executor.execute(wrapped);
-                                else {
-                                    switch (wrapped.senderType()) {
-                                        case PLAYER -> wrapped.response(MessageTypes.NOT_ALLOWED_PLAYER);
-                                        case CONSOLE -> wrapped.response(MessageTypes.NOT_ALLOWED_CONSOLE);
-                                        case REMOTE_CONSOLE ->
-                                                wrapped.response(MessageTypes.NOT_ALLOWED_REMOTE_CONSOLE);
-                                        case ENTITY -> wrapped.response(MessageTypes.NOT_ALLOWED_ENTITY);
-                                        case COMMAND_BLOCK -> wrapped.response(MessageTypes.NOT_ALLOWED_COMMAND_BLOCK);
-                                        case PROXIED -> wrapped.response(MessageTypes.NOT_ALLOWED_PROXIED_SENDER);
-                                    }
-                                }
-                            });
+
+                if (!executed) {
+                    switch (wrapped.senderType()) {
+                        case PLAYER -> wrapped.response(MessageTypes.NOT_ALLOWED_PLAYER);
+                        case CONSOLE -> wrapped.response(MessageTypes.NOT_ALLOWED_CONSOLE);
+                        case REMOTE_CONSOLE -> wrapped.response(MessageTypes.NOT_ALLOWED_REMOTE_CONSOLE);
+                        case ENTITY -> wrapped.response(MessageTypes.NOT_ALLOWED_ENTITY);
+                        case COMMAND_BLOCK -> wrapped.response(MessageTypes.NOT_ALLOWED_COMMAND_BLOCK);
+                    }
                 }
+
                 return 1;
             } catch (CmdException e) {
                 e.send();
+                return 0;
+            } catch (Throwable e) {
+                MessageTypes.sendUnexpectedError(sender, e);
                 return 0;
             }
         });
     }
 
+    /**
+     * Sets the executor for the argument if any executor is set, bad naming choice sorry.
+     */
     private void executeIf() {
         if (defaultExecutor != null || playerExecutor != null || consoleExecutor != null || remoteConsoleExecutor != null || entityExecutor != null || blockExecutor != null || proxiedExecutor != null) {
             execute();
@@ -580,19 +665,6 @@ public final class CommandArgument {
     /**
      * Adds an argument to the argument.
      *
-     * @param argument the {@link AbstractCommandArgument}
-     * @return this {@link CommandArgument} instance for chaining.
-     */
-    @NotNull
-    @CanIgnoreReturnValue
-    public CommandArgument argument(@NotNull AbstractCommandArgument argument) {
-        argumentStack.add(argument.build().get());
-        return this;
-    }
-
-    /**
-     * Adds an argument to the argument.
-     *
      * @param argument the {@link Argument}
      * @param handler  the {@link CompletionHandler} for the argument.
      * @return this {@link CommandArgument} instance for chaining.
@@ -624,7 +696,7 @@ public final class CommandArgument {
         arg.executes(context -> {
             CommandWrapper wrapped = new CommandWrapper(context);
             try {
-                executor.execute(wrapped);
+                executor.executeSafely(wrapped);
                 return 1;
             } catch (CmdException e) {
                 e.send();
@@ -650,7 +722,7 @@ public final class CommandArgument {
         arg.executes(context -> {
             CommandWrapper wrapped = new CommandWrapper(context);
             try {
-                executor.execute(wrapped);
+                executor.executeSafely(wrapped);
                 return 1;
             } catch (CmdException e) {
                 e.send();
@@ -716,7 +788,7 @@ public final class CommandArgument {
         arg.executes(context -> {
             CommandWrapper wrapped = new CommandWrapper(context);
             try {
-                executor.execute(wrapped);
+                executor.executeSafely(wrapped);
                 return 1;
             } catch (CmdException e) {
                 e.send();
@@ -743,7 +815,7 @@ public final class CommandArgument {
         arg.executes(context -> {
             CommandWrapper wrapped = new CommandWrapper(context);
             try {
-                executor.execute(wrapped);
+                executor.executeSafely(wrapped);
                 return 1;
             } catch (CmdException e) {
                 e.send();
@@ -947,25 +1019,10 @@ public final class CommandArgument {
     }
 
     /**
-     * Adds a subcommand to the argument.
-     *
-     * @param subCommand the {@link AbstractSubCommand} to be added.
-     * @return this {@link CommandArgument} instance for chaining.
-     */
-    @NotNull
-    @CanIgnoreReturnValue
-    public CommandArgument subCommand(@NotNull AbstractSubCommand subCommand) {
-        argument.then(subCommand.build().get());
-        return this;
-    }
-
-    /**
      * Disables argument nesting for the argument.
      * <p>
-     * Note, disabling this (may) have 2 or even more arguments in a single argument, which is not recommended.
-     * So it would be "/command [arg1 | arg2 | arg3]" instead of "/command arg1 arg2 arg3", there are other unexpected results as well, for example arguments not working.
-     * <p>
-     * Some cases where this would work would be using {@link CommandArgument} and {@link CommandArgument#argument(CommandArgument)}, but if disabled nesting in command arguments will lead to it not working.
+     * Note, disabling this (may) have 2 or even more arguments in a single argument.
+     * So it would be "/command [arg1 | arg2 | arg3]" instead of "/command arg1 arg2 arg3". There are other unexpected results as well.
      *
      * @return this {@link CommandArgument} instance for chaining.
      */
@@ -975,48 +1032,23 @@ public final class CommandArgument {
     }
 
     /**
-     * Adds a permission to the argument.
+     * Sets the permission of the argument.
      *
-     * @param permission the {@link CommandPermission} to be added.
+     * @param permission a {@link CommandPermission} for setting metadata.
      * @return this {@link CommandArgument} instance for chaining.
      */
     @NotNull
     @CanIgnoreReturnValue
     public CommandArgument permission(@NotNull CommandPermission permission) {
-        if (permission.isOpPermission()) {
-            argument.requires(consumer -> consumer.getSender().isOp());
-        } else if (permission.getPermission() != null) {
-            argument.requires(consumer -> consumer.getSender().hasPermission(permission.getPermission()));
-        }
+        argument.requires(stack -> permission.allows(new BasicCommandDetails(stack)));
         return this;
     }
 
     /**
-     * The requirement of the subcommand, if the requirement is not met the argument will not execute.
+     * Builds and returns the argument, this will nest the argument if nesting is enabled, and add a executor if any executor is set.
      *
-     * @param requirement the {@link Predicate} for the requirement
-     * @return this {@link CommandArgument} instance for chaining
+     * @return the built {@link RequiredArgumentBuilder} instance.
      */
-    @NotNull
-    @CanIgnoreReturnValue
-    public CommandArgument requirement(@NotNull Predicate<CommandRequirement> requirement) {
-        argument.requires(consumer -> requirement.test(new CommandRequirement(consumer)));
-        return this;
-    }
-
-    /**
-     * The requirement of the argument, if the requirement is not met the argument will not execute.
-     *
-     * @param checker the {@link BooleanChecker} for the requirement
-     * @return this {@link CommandArgument} instance for chaining
-     */
-    @NotNull
-    @CanIgnoreReturnValue
-    public CommandArgument requirement(@NotNull BooleanChecker checker) {
-        argument.requires(consumer -> checker.check());
-        return this;
-    }
-
     @NotNull
     public RequiredArgumentBuilder<CommandSourceStack, ?> get() {
         executeIf();

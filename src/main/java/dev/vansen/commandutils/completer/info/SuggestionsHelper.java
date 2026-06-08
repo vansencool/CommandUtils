@@ -10,11 +10,12 @@ import java.util.List;
  * A utility class for accessing argument details from a SuggestionsBuilderWrapper.
  * <p>
  * NOW DEPRECATED!
- * This class does not work, however, it is only attained for the sole purpose of its previous args working!
+ * This class does not work and is only retained because previous arguments work.
  * <p>
- * Though however, previous arg require you to check if current arg (SuggestionsBuilderWrapper) is empty, if it is, then you need to do currentArg (this class) for the previous arg, or you can normally call previous arg
+ * However, previous arguments require you to check whether the current argument (SuggestionsBuilderWrapper) is empty. If it is empty, you must use the current
+ * argument method of this class for the previous argument. Otherwise, you can normally call the previous argument.
  */
-@Deprecated
+@Deprecated(forRemoval = true)
 @SuppressWarnings("unused")
 public final class SuggestionsHelper {
     private final @NotNull String input;

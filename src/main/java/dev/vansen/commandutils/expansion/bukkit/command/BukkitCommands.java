@@ -1,6 +1,6 @@
-package dev.vansen.commandutils.bukkit.command;
+package dev.vansen.commandutils.expansion.bukkit.command;
 
-import dev.vansen.commandutils.bukkit.argument.BukkitArgument;
+import dev.vansen.commandutils.expansion.bukkit.argument.BukkitArgument;
 import org.jetbrains.annotations.NotNull;
 
 /**

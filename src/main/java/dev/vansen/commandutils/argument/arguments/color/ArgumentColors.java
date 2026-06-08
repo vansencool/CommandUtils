@@ -14,7 +14,7 @@ public class ArgumentColors {
     /**
      * A map of color names to their hex values, check {@link #defaultColors()} for default colors and {@link #addColor(String, String)} for adding custom colors
      */
-    public static ConcurrentMap<String, String> COLOR_MAP = new ConcurrentHashMap<>(1024, 0.75f);
+    public final static ConcurrentMap<String, String> COLOR_MAP = new ConcurrentHashMap<>(210);
 
     static {
         defaultColors();
@@ -240,7 +240,7 @@ public class ArgumentColors {
      * @param name the name of the color
      * @param hex  the hex code of the color
      */
-    public static void addColor(String name, String hex) {
+    public static void addColor(@NotNull String name, @NotNull String hex) {
         COLOR_MAP.put(name, hex);
     }
 
@@ -251,7 +251,7 @@ public class ArgumentColors {
      */
     @SafeVarargs
     public static void addColor(@NotNull Map<String, String>... maps) {
-        Arrays.stream(maps).forEach(map -> COLOR_MAP.putAll(map));
+        Arrays.stream(maps).forEach(COLOR_MAP::putAll);
     }
 
     /**

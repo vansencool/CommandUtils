@@ -1,13 +1,14 @@
-package dev.vansen.commandutils.bukkit;
+package dev.vansen.commandutils.expansion.bukkit;
 
 import dev.vansen.commandutils.CommandUtils;
 import dev.vansen.commandutils.argument.CommandArgument;
-import dev.vansen.commandutils.bukkit.argument.ArgumentParser;
-import dev.vansen.commandutils.bukkit.argument.BukkitArgument;
-import dev.vansen.commandutils.bukkit.command.BukkitCommands;
-import dev.vansen.commandutils.bukkit.tabcompletion.AsyncTabCompleter;
-import dev.vansen.commandutils.bukkit.tabcompletion.TabCompleter;
+import dev.vansen.commandutils.expansion.bukkit.argument.ArgumentParser;
+import dev.vansen.commandutils.expansion.bukkit.argument.BukkitArgument;
+import dev.vansen.commandutils.expansion.bukkit.command.BukkitCommands;
+import dev.vansen.commandutils.expansion.bukkit.tabcompletion.AsyncTabCompleter;
+import dev.vansen.commandutils.expansion.bukkit.tabcompletion.TabCompleter;
 import dev.vansen.commandutils.info.CommandInfo;
+import dev.vansen.commandutils.permission.CommandPermission;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
@@ -30,7 +31,7 @@ public class CommandManager {
                 .info(CommandInfo.info()
                         .description(info.description())
                         .aliases(info.aliases())
-                        .permission(info.permission()));
+                        .permission(CommandPermission.permission(info.permission())));
         if (info.args().isEmpty() || new ArgumentParser(info.args()).length() == 0) {
             registrar.defaultExecute(context -> command.execute(new BukkitArgument(context, info.args())));
             if (new ArgumentParser(info.args()).hasArgs()) {

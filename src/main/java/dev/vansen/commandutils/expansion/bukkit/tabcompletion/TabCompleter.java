@@ -1,7 +1,7 @@
-package dev.vansen.commandutils.bukkit.tabcompletion;
+package dev.vansen.commandutils.expansion.bukkit.tabcompletion;
 
-import dev.vansen.commandutils.bukkit.argument.BukkitArgument;
 import dev.vansen.commandutils.completer.SuggestionsBuilderWrapper;
+import dev.vansen.commandutils.expansion.bukkit.argument.BukkitArgument;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
